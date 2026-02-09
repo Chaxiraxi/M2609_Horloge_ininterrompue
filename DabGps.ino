@@ -1,13 +1,17 @@
 #include <Adafruit_GPS.h>
+#include <Adafruit_MCP23X17.h>
 #include <DABShield.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
+
+#include "LiquidCrystal_MCP.h"
 
 SoftwareSerial gpsSerial(3, 4);
 Adafruit_GPS GPS(&gpsSerial);
 
 #define GPSECHO false
 #define SPEAKER_OUTPUT SPEAKER_NONE  // SPEAKER_NONE, SPEAKER_DIFF, SPEAKER_STEREO
+#define SCREEN_CONTRAST_PIN A0
 
 DAB Dab;
 DABTime dabtime;
@@ -15,6 +19,8 @@ bool hasService = false;
 const byte dabSpiSelectPin = 8;
 uint8_t tunedServiceIndex = 0;
 uint32_t lastTimePrintMs = 0;
+Adafruit_MCP23X17 mcp;
+LiquidCrystal screen(8, 9, 10, 11, 12, 13);
 
 bool tuneFirstAvailableService() {
     for (uint8_t freq_index = 0; freq_index < DAB_FREQS; freq_index++) {
@@ -88,12 +94,48 @@ void printGpsTime() {
     Serial.println(GPS.milliseconds);
 }
 
+void printGpsTimeOnScreen() {
+    screen.setCursor(0, 0);
+    if (GPS.hour < 10) {
+        screen.print('0');
+    }
+    screen.print(GPS.hour, DEC);
+    screen.print(':');
+    if (GPS.minute < 10) {
+        screen.print('0');
+    }
+    screen.print(GPS.minute, DEC);
+    screen.print(':');
+    if (GPS.seconds < 10) {
+        screen.print('0');
+    }
+    screen.print(GPS.seconds, DEC);
+}
+
+void debugStartupBlink(int pin = 13, int times = 3, int delayMs = 500) {
+    pinMode(pin, OUTPUT);
+    for (int i = 0; i < times; i++) {
+        digitalWrite(pin, HIGH);
+        delay(delayMs);
+        digitalWrite(pin, LOW);
+        delay(delayMs);
+    }
+}
+
 void setup() {
     // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
     // also spit it out
+    debugStartupBlink();
     Serial.begin(115200);
     delay(5000);
+    debugStartupBlink();
     Serial.println("Adafruit GPS library basic parsing test!");
+    mcp.begin_I2C();
+    screen.setMcp(&mcp);
+    screen.begin(16, 2);
+    analogReadResolution(12);
+    analogWriteResolution(12);
+    analogWrite(SCREEN_CONTRAST_PIN, 600);
 
     // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
     GPS.begin(9600);
@@ -161,6 +203,7 @@ void loop() {
         timer = millis();
 
         // printGpsTime();
+        printGpsTimeOnScreen();
 
         if (hasService) {
             hasService = Dab.status();
@@ -178,8 +221,8 @@ void loop() {
                     } else {
                         timeDiff = dabSeconds - gpsSeconds;
                     }
-                    Serial.print(F("Time difference (GPS - DAB) in seconds: "));
-                    Serial.println(timeDiff);
+                    // Serial.print(F("Time difference (GPS - DAB) in seconds: "));
+                    // Serial.println(timeDiff);
                 } else {
                     Serial.println(F("Local Time (DAB): unavailable"));
                 }
