@@ -1,10 +1,10 @@
 #include <Adafruit_GPS.h>
-#include <Adafruit_MCP23X17.h>
 #include <DABShield.h>
+#include <IoAbstractionWire.h>
+#include <LiquidCrystalIO.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
-
-#include "LiquidCrystal_MCP.h"
+#include <Wire.h>
 
 SoftwareSerial gpsSerial(3, 4);
 Adafruit_GPS GPS(&gpsSerial);
@@ -19,8 +19,15 @@ bool hasService = false;
 const byte dabSpiSelectPin = 8;
 uint8_t tunedServiceIndex = 0;
 uint32_t lastTimePrintMs = 0;
-Adafruit_MCP23X17 mcp;
-LiquidCrystal screen(8, 9, 10, 11, 12, 13);
+const int lcdRs = 8;
+const int lcdEn = 9;
+const int lcdD4 = 10;
+const int lcdD5 = 11;
+const int lcdD6 = 12;
+const int lcdD7 = 13;
+const int resetPin23017 = 5;
+
+LiquidCrystal lcd(lcdRs, lcdEn, lcdD4, lcdD5, lcdD6, lcdD7, ioFrom23017(0x20));
 
 bool tuneFirstAvailableService() {
     for (uint8_t freq_index = 0; freq_index < DAB_FREQS; freq_index++) {
@@ -94,22 +101,48 @@ void printGpsTime() {
     Serial.println(GPS.milliseconds);
 }
 
-void printGpsTimeOnScreen() {
-    screen.setCursor(0, 0);
-    if (GPS.hour < 10) {
-        screen.print('0');
+void printTwoDigits(uint8_t value) {
+    if (value < 10) {
+        lcd.print('0');
     }
-    screen.print(GPS.hour, DEC);
-    screen.print(':');
-    if (GPS.minute < 10) {
-        screen.print('0');
+    lcd.print(value, DEC);
+}
+
+uint8_t wrapHours(int32_t hours) {
+    while (hours < 0) {
+        hours += 24;
     }
-    screen.print(GPS.minute, DEC);
-    screen.print(':');
-    if (GPS.seconds < 10) {
-        screen.print('0');
+    while (hours >= 24) {
+        hours -= 24;
     }
-    screen.print(GPS.seconds, DEC);
+    return static_cast<uint8_t>(hours);
+}
+
+void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t day, uint8_t month, uint16_t year) {
+    lcd.setCursor(0, 0);
+    printTwoDigits(hours);
+    lcd.print(':');
+    printTwoDigits(minutes);
+    lcd.print(':');
+    printTwoDigits(seconds);
+    lcd.print("        ");
+
+    lcd.setCursor(0, 1);
+    printTwoDigits(day);
+    lcd.print('/');
+    printTwoDigits(month);
+    lcd.print('/');
+    if (year < 1000) {
+        lcd.print('0');
+        if (year < 100) {
+            lcd.print('0');
+            if (year < 10) {
+                lcd.print('0');
+            }
+        }
+    }
+    lcd.print(year);
+    lcd.print("      ");
 }
 
 void debugStartupBlink(int pin = 13, int times = 3, int delayMs = 500) {
@@ -130,9 +163,13 @@ void setup() {
     delay(5000);
     debugStartupBlink();
     Serial.println("Adafruit GPS library basic parsing test!");
-    mcp.begin_I2C();
-    screen.setMcp(&mcp);
-    screen.begin(16, 2);
+    pinMode(resetPin23017, OUTPUT);
+    digitalWrite(resetPin23017, LOW);
+    delayMicroseconds(100);
+    digitalWrite(resetPin23017, HIGH);
+
+    Wire.begin();
+    lcd.begin(16, 2);
     analogReadResolution(12);
     analogWriteResolution(12);
     analogWrite(SCREEN_CONTRAST_PIN, 600);
@@ -203,7 +240,8 @@ void loop() {
         timer = millis();
 
         // printGpsTime();
-        printGpsTimeOnScreen();
+
+        bool displayed = false;
 
         if (hasService) {
             hasService = Dab.status();
@@ -211,18 +249,10 @@ void loop() {
                 bool notError = Dab.time(&dabtime) == 0;
                 if (notError) {
                     // printDabTime();
-                    // Print the difference between GPS and DAB time in seconds
-                    constexpr uint8_t TIMEZONE_OFFSET_HOURS = 1;  // Adjust this value based on your local timezone
-                    int32_t gpsSeconds = (GPS.hour + TIMEZONE_OFFSET_HOURS) * 3600 + GPS.minute * 60 + GPS.seconds;
-                    int32_t dabSeconds = dabtime.Hours * 3600 + dabtime.Minutes * 60 + dabtime.Seconds;
-                    int32_t timeDiff;
-                    if (dabSeconds < gpsSeconds) {
-                        timeDiff = gpsSeconds - dabSeconds;
-                    } else {
-                        timeDiff = dabSeconds - gpsSeconds;
-                    }
-                    // Serial.print(F("Time difference (GPS - DAB) in seconds: "));
-                    // Serial.println(timeDiff);
+                    constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;  // Adjust this value based on your local timezone
+                    uint8_t localHours = wrapHours(static_cast<int32_t>(dabtime.Hours) + TIMEZONE_OFFSET_HOURS);
+                    printTimeDateOnScreen(localHours, dabtime.Minutes, dabtime.Seconds, dabtime.Days, dabtime.Months, dabtime.Year);
+                    displayed = true;
                 } else {
                     Serial.println(F("Local Time (DAB): unavailable"));
                 }
@@ -231,6 +261,11 @@ void loop() {
             }
         } else {
             Serial.println(F("Local Time (DAB): no service"));
+        }
+        if (!displayed) {
+            constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;  // Adjust this value based on your local timezone
+            uint8_t localHours = wrapHours(static_cast<int32_t>(GPS.hour) + TIMEZONE_OFFSET_HOURS);
+            printTimeDateOnScreen(localHours, GPS.minute, GPS.seconds, GPS.day, GPS.month, 2000 + GPS.year);
         }
     }
 }
