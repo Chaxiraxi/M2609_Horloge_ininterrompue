@@ -47,9 +47,11 @@ bool DABTimeSource::tuneFirstAvailableService() {
 }
 
 bool DABTimeSource::getDateTime(DateTimeFields& out) {
-    if (!isEnabled()) {
-        return false;
-    }
+    if (!isEnabled()) return false;
+
+    static uint32_t lastStatusCheckMs = 0;
+    if (millis() - lastStatusCheckMs < 1000) return true;  // avoid querying DAB status too frequently
+    lastStatusCheckMs = millis();
 
     if (!hasService_) {
         Serial.println(F("Local Time (DAB): no service"));

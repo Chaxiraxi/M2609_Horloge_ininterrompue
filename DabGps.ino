@@ -13,7 +13,7 @@
 SoftwareSerial gpsSerial(3, 4);
 Adafruit_GPS GPS(&gpsSerial);
 
-#define GPSECHO false
+#define GPSECHO true
 #define SPEAKER_OUTPUT SPEAKER_NONE  // SPEAKER_NONE, SPEAKER_DIFF, SPEAKER_STEREO
 #define SCREEN_CONTRAST_PIN A0
 
@@ -175,38 +175,53 @@ void setup() {
     analogWrite(SCREEN_CONTRAST_PIN, 600);
 
     gpsTimeSource.init();
-    dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
+    // dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
+
+    // DEBUG
+    dabTimeSource.setEnabled(false);
 }
 
 uint32_t timer = millis();
+DateTimeFields dateTime;
 void loop() {
-    char c = GPS.read();
-    // if you want to debug, this is a good time to do it!
-    if ((c) && (GPSECHO)) Serial.write(c);
-
-    // if a sentence is received, we can check the checksum, parse it...
-    if (GPS.newNMEAreceived()) {
-        // a tricky thing here is if we print the NMEA sentence, or data
-        // we end up not listening and catching other sentences!
-        // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
-        // Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
-
-        if (!GPS.parse(GPS.lastNMEA()))  // this also sets the newNMEAreceived() flag to false
-            return;                      // we can fail to parse a sentence in which case we should just wait for another
+    // Drain GPS bytes as fast as possible. Reading only one byte per loop
+    // iteration can fall behind when the loop does slower work (LCD/I2C).
+    while (gpsSerial.available() > 0) {
+        char c = GPS.read();
+        if (GPSECHO && c) {
+            Serial.write(c);
+        }
     }
 
-    // approximately every 500 ms, print both GPS and DAB times
-    if (millis() - timer > 1000) {
-        timer = millis();
+    // If a sentence is received, we can check the checksum, parse it...
+    // Use a loop in case we completed more than one sentence while draining bytes.
+    while (GPS.newNMEAreceived()) {
+        // A tricky thing here is if we print the NMEA sentence, or data
+        // we end up not listening and catching other sentences!
+        // so be very wary if using OUTPUT_ALLDATA and trying to print out data
+        // Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
 
-        // printGpsTime();
+        if (!GPS.parse(GPS.lastNMEA())) {
+            // Parsing failed; keep looping so we continue draining/processing.
+            // (A fail can happen if we previously dropped bytes.)
+        }
+    }
 
-        DateTimeFields dateTime;
+    static uint32_t lastLcdUpdateMs = 0;
+    constexpr uint16_t LCD_UPDATE_INTERVAL_MS = 100;
+    if (millis() - lastLcdUpdateMs >= LCD_UPDATE_INTERVAL_MS) {
+        lastLcdUpdateMs = millis();
+
         if (dabTimeSource.getDateTime(dateTime)) {
             printTimeDateOnScreen(dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
         } else if (gpsTimeSource.getDateTime(dateTime)) {
             printTimeDateOnScreen(dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
+        } else {
+            lcd.setCursor(0, 0);
+            lcd.print("ERROR");
         }
+    } else {
+        // Keep looping fast to avoid falling behind on GPS bytes.
     }
 }
 

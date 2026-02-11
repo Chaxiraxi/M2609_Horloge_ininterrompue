@@ -28,25 +28,15 @@ void GPSTimeSource::init() {
 }
 
 bool GPSTimeSource::isSaneDateTime() const {
-    if (gps_.year == 0 || gps_.month == 0 || gps_.day == 0) {
-        return false;
-    }
-    if (gps_.month > 12 || gps_.day > 31) {
-        return false;
-    }
-    if (gps_.hour > 23 || gps_.minute > 59 || gps_.seconds > 59) {
-        return false;
-    }
+    if (gps_.year == 0 || gps_.month == 0 || gps_.day == 0) return false;
+    if (gps_.month > 12 || gps_.day > 31) return false;
+    if (gps_.hour > 23 || gps_.minute > 59 || gps_.seconds > 59) return false;
     return true;
 }
 
 bool GPSTimeSource::getDateTime(DateTimeFields& out) {
-    if (!isEnabled()) {
-        return false;
-    }
-    if (!isSaneDateTime()) {
-        return false;
-    }
+    if (!isEnabled()) return false;
+    if (!isSaneDateTime()) return false;
 
     out.date.year = static_cast<uint16_t>(2000 + gps_.year);
     out.date.month = gps_.month;
