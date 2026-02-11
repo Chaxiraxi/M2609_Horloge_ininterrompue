@@ -56,6 +56,19 @@ class DABTimeSource : public TimeSource {
     bool init(uint8_t spiSelectPin, uint8_t speakerOutput, uint8_t band = 0);
 
     /**
+     * @brief Check if the current DAB date and time values are sane.
+     * @details
+     * Description:
+     *   Validates the DAB-provided date and time values to ensure they fall within acceptable ranges.
+     *
+     * @return True if the date and time values are sane; false otherwise.
+     *
+     * @author GOLETTA David
+     * @date 11/02/2026
+     */
+    bool isSaneDateTime() const;
+
+    /**
      * @brief Get the current date and time from DAB.
      * @details
      * Description:

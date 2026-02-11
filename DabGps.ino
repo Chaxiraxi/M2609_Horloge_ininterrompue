@@ -13,7 +13,7 @@
 SoftwareSerial gpsSerial(3, 4);
 Adafruit_GPS GPS(&gpsSerial);
 
-#define GPSECHO true
+#define GPSECHO false
 #define SPEAKER_OUTPUT SPEAKER_NONE  // SPEAKER_NONE, SPEAKER_DIFF, SPEAKER_STEREO
 #define SCREEN_CONTRAST_PIN A0
 
@@ -137,7 +137,7 @@ void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint
     lcd.setCursor(0, 1);
     static uint32_t lastScrollTime = 0;
     static uint8_t scrollOffset = 0;
-    static const uint16_t SCROLL_DELAY_MS = 300;
+    static const uint16_t SCROLL_DELAY_MS = 500;
 
     String scrollText = dayOfWeek + " " + (day < 10 ? "0" : "") + String(day) + "/" +
                         (month < 10 ? "0" : "") + String(month) + "/" +
@@ -157,6 +157,39 @@ void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint
     }
 }
 
+void displayLongText(String text) {
+    // If shorter than 8, print on the first line
+    // If between 8 and 16 chars, split and print on both lines
+    // If longer than 16 chars, split after 8 char on the second line and scroll both lines together to read the full text
+    if (text.length() <= 8) {
+        lcd.setCursor(0, 0);
+        lcd.print(text);
+    } else if (text.length() <= 16) {
+        lcd.setCursor(0, 0);
+        lcd.print(text.substring(0, 8));
+        lcd.setCursor(0, 1);
+        lcd.print(text.substring(8));
+    } else {
+        // For longer text, we can implement a scrolling mechanism similar to the date line in printTimeDateOnScreen
+        static uint32_t lastScrollTime = 0;
+        static uint8_t scrollOffset = 0;
+        static const uint16_t SCROLL_DELAY_MS = 500;
+        text += "  ";  // Add some spacing at the end for better readability when scrolling
+        if (millis() - lastScrollTime >= SCROLL_DELAY_MS) {
+            lastScrollTime = millis();
+            scrollOffset = (scrollOffset + 1) % text.length();
+        }
+        lcd.setCursor(0, 0);
+        for (uint8_t i = 0; i < 8; i++) {
+            lcd.print(text[(scrollOffset + i) % text.length()]);
+        }
+        lcd.setCursor(0, 1);
+        for (uint8_t i = 0; i < 8; i++) {
+            lcd.print(text[(scrollOffset + 8 + i) % text.length()]);
+        }
+    }
+}
+
 void setup() {
     // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
     // also spit it out
@@ -170,15 +203,16 @@ void setup() {
     digitalWrite(resetPin23017, HIGH);
 
     Wire.begin();
-    lcd.begin(16, 2);
+    lcd.begin(8, 2);
     analogWriteResolution(12);
     analogWrite(SCREEN_CONTRAST_PIN, 600);
 
     gpsTimeSource.init();
-    // dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
+    dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
 
     // DEBUG
-    dabTimeSource.setEnabled(false);
+    gpsTimeSource.setEnabled(true);
+    dabTimeSource.setEnabled(true);
 }
 
 uint32_t timer = millis();
@@ -217,8 +251,7 @@ void loop() {
         } else if (gpsTimeSource.getDateTime(dateTime)) {
             printTimeDateOnScreen(dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
         } else {
-            lcd.setCursor(0, 0);
-            lcd.print("ERROR");
+            displayLongText("No time source found");
         }
     } else {
         // Keep looping fast to avoid falling behind on GPS bytes.

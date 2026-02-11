@@ -46,11 +46,18 @@ bool DABTimeSource::tuneFirstAvailableService() {
     return false;
 }
 
+bool DABTimeSource::isSaneDateTime() const {
+    if (dabtime_.Year == 0 || dabtime_.Months == 0 || dabtime_.Days == 0) return false;
+    if (dabtime_.Months > 12 || dabtime_.Days > 31) return false;
+    if (dabtime_.Hours > 23 || dabtime_.Minutes > 59 || dabtime_.Seconds > 59) return false;
+    return true;
+}
+
 bool DABTimeSource::getDateTime(DateTimeFields& out) {
     if (!isEnabled()) return false;
 
     static uint32_t lastStatusCheckMs = 0;
-    if (millis() - lastStatusCheckMs < 1000) return true;  // avoid querying DAB status too frequently
+    if (millis() - lastStatusCheckMs < 1000) return isSaneDateTime();  // avoid querying DAB status too frequently
     lastStatusCheckMs = millis();
 
     if (!hasService_) {
@@ -68,6 +75,8 @@ bool DABTimeSource::getDateTime(DateTimeFields& out) {
         Serial.println(F("Local Time (DAB): unavailable"));
         return false;
     }
+
+    if (!isSaneDateTime()) return false;
 
     out.date.year = dabtime_.Year;
     out.date.month = dabtime_.Months;
