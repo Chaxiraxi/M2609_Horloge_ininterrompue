@@ -33,7 +33,7 @@ const int resetPin23017 = 5;
 
 LiquidCrystal lcd(lcdRs, lcdEn, lcdD4, lcdD5, lcdD6, lcdD7, ioFrom23017(0x20));
 
-DABTimeSource dabTimeSource(Dab, dabtime, hasService, TIMEZONE_OFFSET_HOURS);
+DABTimeSource dabTimeSource(Dab, dabtime, hasService);
 GPSTimeSource gpsTimeSource(GPS, TIMEZONE_OFFSET_HOURS);
 
 void printDabTime() {
@@ -99,6 +99,30 @@ void printTwoDigits(uint8_t value) {
     lcd.print(value, DEC);
 }
 
+// clang-format off
+String dateToDayOfTheWeek(uint16_t year, uint8_t month, uint8_t day, bool shortForm = false) {
+    // Zeller's Congruence algorithm
+    if (month < 3) {
+        month += 12;
+        year -= 1;
+    }
+    uint16_t k = year % 100;
+    uint16_t j = year / 100;
+    uint8_t h = (day + (13 * (month + 1)) / 5 + k + (k / 4) + (j / 4) - (2 * j)) % 7;
+
+    switch (h) {
+        case 0: return shortForm ? "Sat" : "Saturday";
+        case 1: return shortForm ? "Sun" : "Sunday";
+        case 2: return shortForm ? "Mon" : "Monday";
+        case 3: return shortForm ? "Tue" : "Tuesday";
+        case 4: return shortForm ? "Wed" : "Wednesday";
+        case 5: return shortForm ? "Thu" : "Thursday";
+        case 6: return shortForm ? "Fri" : "Friday";
+        default: return "";
+    }
+}
+// clang-format on
+
 void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t day, uint8_t month, uint16_t year) {
     lcd.setCursor(0, 0);
     printTwoDigits(hours);
@@ -108,22 +132,29 @@ void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint
     printTwoDigits(seconds);
     lcd.print("        ");
 
+    // Manual scrolling implementation for second line
+    String dayOfWeek = dateToDayOfTheWeek(year, month, day, true);
     lcd.setCursor(0, 1);
-    printTwoDigits(day);
-    lcd.print('/');
-    printTwoDigits(month);
-    lcd.print('/');
-    if (year < 1000) {
-        lcd.print('0');
-        if (year < 100) {
-            lcd.print('0');
-            if (year < 10) {
-                lcd.print('0');
-            }
-        }
+    static uint32_t lastScrollTime = 0;
+    static uint8_t scrollOffset = 0;
+    static const uint16_t SCROLL_DELAY_MS = 300;
+
+    String scrollText = dayOfWeek + " " + (day < 10 ? "0" : "") + String(day) + "/" +
+                        (month < 10 ? "0" : "") + String(month) + "/" +
+                        (year < 10 ? "000" : year < 100 ? "00"
+                                         : year < 1000  ? "0"
+                                                        : "") +
+                        String(year) + "  ";
+
+    lcd.print(" ");
+    if (millis() - lastScrollTime >= SCROLL_DELAY_MS) {
+        lastScrollTime = millis();
+        scrollOffset = (scrollOffset + 1) % scrollText.length();
     }
-    lcd.print(year);
-    lcd.print("      ");
+
+    for (uint8_t i = 0; i < 15; i++) {
+        lcd.print(scrollText[(scrollOffset + i) % scrollText.length()]);
+    }
 }
 
 void setup() {

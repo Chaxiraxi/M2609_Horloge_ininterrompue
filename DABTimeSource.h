@@ -36,7 +36,7 @@ class DABTimeSource : public TimeSource {
      * @author GOLETTA David
      * @date 11/02/2026
      */
-    DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours);
+    DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours = 0);
 
     /**
      * @brief Initialize the DAB shield and attempt to tune a service.
