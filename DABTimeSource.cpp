@@ -76,7 +76,22 @@ bool DABTimeSource::getDateTime(DateTimeFields& out) {
         return false;
     }
 
-    if (!isSaneDateTime()) return false;
+    if (!isSaneDateTime()) {
+        Serial.print("Local Time (DAB): invalid time received (");
+        Serial.print(dabtime_.Year);
+        Serial.print("-");
+        Serial.print(dabtime_.Months);
+        Serial.print("-");
+        Serial.print(dabtime_.Days);
+        Serial.print(" ");
+        Serial.print(dabtime_.Hours);
+        Serial.print(":");
+        Serial.print(dabtime_.Minutes);
+        Serial.print(":");
+        Serial.print(dabtime_.Seconds);
+        Serial.println(")");
+        return false;
+    }
 
     out.date.year = dabtime_.Year;
     out.date.month = dabtime_.Months;

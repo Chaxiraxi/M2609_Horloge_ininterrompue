@@ -1,0 +1,8 @@
+#define SET_BTN 9
+#define LCD_RS 8
+#define LCD_EN 9
+#define LCD_D4 10
+#define LCD_D5 11
+#define LCD_D6 12
+#define LCD_D7 13
+#define RESET_PIN_23017 5

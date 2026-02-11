@@ -6,8 +6,10 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
+#include "Button.h"
 #include "DABTimeSource.h"
 #include "GPSTimeSource.h"
+#include "PinDefinitions.h"
 #include "TimeSource.h"
 
 SoftwareSerial gpsSerial(3, 4);
@@ -23,15 +25,9 @@ bool hasService = false;
 constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;
 const byte dabSpiSelectPin = 8;
 uint32_t lastTimePrintMs = 0;
-const int lcdRs = 8;
-const int lcdEn = 9;
-const int lcdD4 = 10;
-const int lcdD5 = 11;
-const int lcdD6 = 12;
-const int lcdD7 = 13;
-const int resetPin23017 = 5;
 
-LiquidCrystal lcd(lcdRs, lcdEn, lcdD4, lcdD5, lcdD6, lcdD7, ioFrom23017(0x20));
+Button setButton(SET_BTN);
+LiquidCrystal lcd(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7, ioFrom23017(0x20));
 
 DABTimeSource dabTimeSource(Dab, dabtime, hasService);
 GPSTimeSource gpsTimeSource(GPS, TIMEZONE_OFFSET_HOURS);
@@ -197,10 +193,10 @@ void setup() {
     Serial.println("Adafruit GPS library basic parsing test!");
 
     // Reset the MCP23017 I/O expander to ensure it's in a known state (it can get into a bad state if power is removed while it's writing to its registers)
-    pinMode(resetPin23017, OUTPUT);
-    digitalWrite(resetPin23017, LOW);
+    pinMode(RESET_PIN_23017, OUTPUT);
+    digitalWrite(RESET_PIN_23017, LOW);
     delayMicroseconds(100);
-    digitalWrite(resetPin23017, HIGH);
+    digitalWrite(RESET_PIN_23017, HIGH);
 
     Wire.begin();
     lcd.begin(8, 2);
@@ -218,6 +214,16 @@ void setup() {
 uint32_t timer = millis();
 DateTimeFields dateTime;
 void loop() {
+    setButton.updateState();
+    if (setButton.isPressed()) {
+        if (dabTimeSource.isEnabled()) {
+            dabTimeSource.setEnabled(false);
+            Serial.println("DAB time source disabled");
+        } else {
+            dabTimeSource.setEnabled(true);
+            Serial.println("DAB time source enabled");
+        }
+    }
     // Drain GPS bytes as fast as possible. Reading only one byte per loop
     // iteration can fall behind when the loop does slower work (LCD/I2C).
     while (gpsSerial.available() > 0) {
