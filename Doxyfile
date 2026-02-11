@@ -1,0 +1,14 @@
+PROJECT_NAME           = "DabGps"
+OUTPUT_DIRECTORY       = docs
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+INPUT                  = "C:/Users/david/Documents/CPNV/Module 4 électronique/Arduino/DabGps"
+RECURSIVE              = YES
+FILE_PATTERNS          = *.h *.hpp *.c *.cpp *.ino
+EXTENSION_MAPPING      = ino=C++
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+QUIET                  = NO
+WARNINGS               = YES
+USE_MDFILE_AS_MAINPAGE =

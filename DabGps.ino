@@ -6,6 +6,10 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
+#include "DABTimeSource.h"
+#include "GPSTimeSource.h"
+#include "TimeSource.h"
+
 SoftwareSerial gpsSerial(3, 4);
 Adafruit_GPS GPS(&gpsSerial);
 
@@ -16,8 +20,8 @@ Adafruit_GPS GPS(&gpsSerial);
 DAB Dab;
 DABTime dabtime;
 bool hasService = false;
+constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;
 const byte dabSpiSelectPin = 8;
-uint8_t tunedServiceIndex = 0;
 uint32_t lastTimePrintMs = 0;
 const int lcdRs = 8;
 const int lcdEn = 9;
@@ -29,21 +33,8 @@ const int resetPin23017 = 5;
 
 LiquidCrystal lcd(lcdRs, lcdEn, lcdD4, lcdD5, lcdD6, lcdD7, ioFrom23017(0x20));
 
-bool tuneFirstAvailableService() {
-    for (uint8_t freq_index = 0; freq_index < DAB_FREQS; freq_index++) {
-        Dab.tune(freq_index);
-        if (Dab.servicevalid() == true) {
-            tunedServiceIndex = 0;
-            Dab.set_service(tunedServiceIndex);
-            Serial.print(F("Tuned ensemble: "));
-            Serial.println(Dab.Ensemble);
-            Serial.print(F("Service: "));
-            Serial.println(Dab.service[tunedServiceIndex].Label);
-            return true;
-        }
-    }
-    return false;
-}
+DABTimeSource dabTimeSource(Dab, dabtime, hasService, TIMEZONE_OFFSET_HOURS);
+GPSTimeSource gpsTimeSource(GPS, TIMEZONE_OFFSET_HOURS);
 
 void printDabTime() {
     Serial.print(F("Local Time (DAB): "));
@@ -108,16 +99,6 @@ void printTwoDigits(uint8_t value) {
     lcd.print(value, DEC);
 }
 
-uint8_t wrapHours(int32_t hours) {
-    while (hours < 0) {
-        hours += 24;
-    }
-    while (hours >= 24) {
-        hours -= 24;
-    }
-    return static_cast<uint8_t>(hours);
-}
-
 void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t day, uint8_t month, uint16_t year) {
     lcd.setCursor(0, 0);
     printTwoDigits(hours);
@@ -145,24 +126,13 @@ void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint
     lcd.print("      ");
 }
 
-void debugStartupBlink(int pin = 13, int times = 3, int delayMs = 500) {
-    pinMode(pin, OUTPUT);
-    for (int i = 0; i < times; i++) {
-        digitalWrite(pin, HIGH);
-        delay(delayMs);
-        digitalWrite(pin, LOW);
-        delay(delayMs);
-    }
-}
-
 void setup() {
     // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
     // also spit it out
-    debugStartupBlink();
     Serial.begin(115200);
-    delay(5000);
-    debugStartupBlink();
     Serial.println("Adafruit GPS library basic parsing test!");
+
+    // Reset the MCP23017 I/O expander to ensure it's in a known state (it can get into a bad state if power is removed while it's writing to its registers)
     pinMode(resetPin23017, OUTPUT);
     digitalWrite(resetPin23017, LOW);
     delayMicroseconds(100);
@@ -170,52 +140,11 @@ void setup() {
 
     Wire.begin();
     lcd.begin(16, 2);
-    analogReadResolution(12);
     analogWriteResolution(12);
     analogWrite(SCREEN_CONTRAST_PIN, 600);
 
-    // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
-    GPS.begin(9600);
-
-    // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
-    GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-    // uncomment this line to turn on only the "minimum recommended" data
-    // GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
-    // For parsing data, we don't suggest using anything but either RMC only or RMC+GGA since
-    // the parser doesn't care about other sentences at this time
-
-    // Set the update rate
-    GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);  // 1 Hz update rate
-    // For the parsing code to work nicely and have time to sort thru the data, and
-    // print it out we don't suggest using anything higher than 1 Hz
-
-    // Request updates on antenna status, comment out to keep quiet
-    GPS.sendCommand(PGCMD_ANTENNA);
-
-    delay(1000);
-    // Ask for firmware version
-    gpsSerial.println(PMTK_Q_RELEASE);
-
-    pinMode(dabSpiSelectPin, OUTPUT);
-    digitalWrite(dabSpiSelectPin, HIGH);
-    SPI.begin();
-
-    Serial.println(F("Initializing DAB Shield..."));
-    Dab.speaker(SPEAKER_OUTPUT);
-    Dab.begin(0);  // 0 = DAB band, 1 = FM band
-
-    if (Dab.error != 0) {
-        Serial.print(F("ERROR: "));
-        Serial.println(Dab.error);
-        Serial.println(F("Check DABShield connection and SPI"));
-        return;
-    }
-
-    Serial.println(F("Scanning for DAB services..."));
-    hasService = tuneFirstAvailableService();
-    if (!hasService) {
-        Serial.println(F("No DAB services found."));
-    }
+    gpsTimeSource.init();
+    dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
 }
 
 uint32_t timer = millis();
@@ -241,31 +170,11 @@ void loop() {
 
         // printGpsTime();
 
-        bool displayed = false;
-
-        if (hasService) {
-            hasService = Dab.status();
-            if (hasService) {
-                bool notError = Dab.time(&dabtime) == 0;
-                if (notError) {
-                    // printDabTime();
-                    constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;  // Adjust this value based on your local timezone
-                    uint8_t localHours = wrapHours(static_cast<int32_t>(dabtime.Hours) + TIMEZONE_OFFSET_HOURS);
-                    printTimeDateOnScreen(localHours, dabtime.Minutes, dabtime.Seconds, dabtime.Days, dabtime.Months, dabtime.Year);
-                    displayed = true;
-                } else {
-                    Serial.println(F("Local Time (DAB): unavailable"));
-                }
-            } else {
-                Serial.println(F("Local Time (DAB): service lost"));
-            }
-        } else {
-            Serial.println(F("Local Time (DAB): no service"));
-        }
-        if (!displayed) {
-            constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;  // Adjust this value based on your local timezone
-            uint8_t localHours = wrapHours(static_cast<int32_t>(GPS.hour) + TIMEZONE_OFFSET_HOURS);
-            printTimeDateOnScreen(localHours, GPS.minute, GPS.seconds, GPS.day, GPS.month, 2000 + GPS.year);
+        DateTimeFields dateTime;
+        if (dabTimeSource.getDateTime(dateTime)) {
+            printTimeDateOnScreen(dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
+        } else if (gpsTimeSource.getDateTime(dateTime)) {
+            printTimeDateOnScreen(dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
         }
     }
 }
