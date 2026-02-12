@@ -2,6 +2,7 @@
 
 #include <DABShield.h>
 
+#include "Notification.h"
 #include "TimeSource.h"
 
 /**
@@ -36,7 +37,7 @@ class DABTimeSource : public TimeSource {
      * @author GOLETTA David
      * @date 11/02/2026
      */
-    DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours = 0);
+    DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours = 0, Notification* notifier = nullptr);
 
     /**
      * @brief Initialize the DAB shield and attempt to tune a service.
@@ -100,5 +101,6 @@ class DABTimeSource : public TimeSource {
     DABTime& dabtime_;
     bool& hasService_;
     int8_t timezoneOffsetHours_;
+    Notification* notifier_;
     uint8_t tunedServiceIndex_ = 0;
 };

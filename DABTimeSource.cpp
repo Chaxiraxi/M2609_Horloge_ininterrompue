@@ -2,29 +2,38 @@
 
 #include <SPI.h>
 
-DABTimeSource::DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours)
-    : dab_(dab), dabtime_(dabtime), hasService_(hasService), timezoneOffsetHours_(timezoneOffsetHours) {}
+#include "utils.h"
+
+DABTimeSource::DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours, Notification* notifier)
+    : dab_(dab), dabtime_(dabtime), hasService_(hasService), timezoneOffsetHours_(timezoneOffsetHours), notifier_(notifier) {}
 
 bool DABTimeSource::init(uint8_t spiSelectPin, uint8_t speakerOutput, uint8_t band) {
     pinMode(spiSelectPin, OUTPUT);
     digitalWrite(spiSelectPin, HIGH);
     SPI.begin();
 
-    Serial.println(F("Initializing DAB Shield..."));
+    if (notifier_) {
+        notifier_->info("Initializing DAB Shield...");
+    }
     dab_.speaker(static_cast<DABSpeaker>(speakerOutput));
     dab_.begin(band);
 
     if (dab_.error != 0) {
-        Serial.print(F("ERROR: "));
-        Serial.println(dab_.error);
-        Serial.println(F("Check DABShield connection and SPI"));
+        if (notifier_) {
+            notifier_->error("DAB initialization error code: " + String(dab_.error));
+            notifier_->error("Check DABShield connection and SPI");
+        }
         return false;
     }
 
-    Serial.println(F("Scanning for DAB services..."));
+    if (notifier_) {
+        notifier_->info("Scanning for DAB services...");
+    }
     hasService_ = tuneFirstAvailableService();
     if (!hasService_) {
-        Serial.println(F("No DAB services found."));
+        if (notifier_) {
+            notifier_->warning("No DAB services found.");
+        }
     }
 
     return hasService_;
@@ -36,10 +45,10 @@ bool DABTimeSource::tuneFirstAvailableService() {
         if (dab_.servicevalid() == true) {
             tunedServiceIndex_ = 0;
             dab_.set_service(tunedServiceIndex_);
-            Serial.print(F("Tuned ensemble: "));
-            Serial.println(dab_.Ensemble);
-            Serial.print(F("Service: "));
-            Serial.println(dab_.service[tunedServiceIndex_].Label);
+            if (notifier_) {
+                notifier_->info("Tuned ensemble: " + String(dab_.Ensemble));
+                notifier_->info("Service: " + String(dab_.service[tunedServiceIndex_].Label));
+            }
             return true;
         }
     }
@@ -57,39 +66,48 @@ bool DABTimeSource::getDateTime(DateTimeFields& out) {
     if (!isEnabled()) return false;
 
     static uint32_t lastStatusCheckMs = 0;
-    if (millis() - lastStatusCheckMs < 1000) return isSaneDateTime();  // avoid querying DAB status too frequently
+    static uint32_t statusCheckIntervalMs = 1000;
+    if (millis() - lastStatusCheckMs < statusCheckIntervalMs) return isSaneDateTime();
+
+    if (isSaneDateTime()) {
+        statusCheckIntervalMs = 1000;  // Reset to default interval on success
+    } else {
+        statusCheckIntervalMs = std::min(statusCheckIntervalMs + 250, 5000UL);  // Increment up to 5000ms
+    }
     lastStatusCheckMs = millis();
 
     if (!hasService_) {
-        Serial.println(F("Local Time (DAB): no service"));
+        if (notifier_) {
+            notifier_->warning("Local Time (DAB): no service");
+        }
         return false;
     }
 
     hasService_ = dab_.status() == 1;
     if (!hasService_) {
-        Serial.println(F("Local Time (DAB): service lost"));
+        if (notifier_) {
+            notifier_->warning("Local Time (DAB): service lost");
+        }
         return false;
     }
 
     if (dab_.time(&dabtime_) != 0) {
-        Serial.println(F("Local Time (DAB): unavailable"));
+        if (notifier_) {
+            notifier_->warning("Local Time (DAB): unavailable");
+        }
         return false;
     }
 
     if (!isSaneDateTime()) {
-        Serial.print("Local Time (DAB): invalid time received (");
-        Serial.print(dabtime_.Year);
-        Serial.print("-");
-        Serial.print(dabtime_.Months);
-        Serial.print("-");
-        Serial.print(dabtime_.Days);
-        Serial.print(" ");
-        Serial.print(dabtime_.Hours);
-        Serial.print(":");
-        Serial.print(dabtime_.Minutes);
-        Serial.print(":");
-        Serial.print(dabtime_.Seconds);
-        Serial.println(")");
+        if (notifier_) {
+            notifier_->error("Local Time (DAB): invalid time received (" +
+                             String(dabtime_.Days) + "/" +
+                             String(dabtime_.Months) + "/" +
+                             String(dabtime_.Year) + " " +
+                             formatTwoDigits(dabtime_.Hours) + ":" +
+                             formatTwoDigits(dabtime_.Minutes) + ":" +
+                             formatTwoDigits(dabtime_.Seconds) + "), waiting for " + String(statusCheckIntervalMs) + "ms before retrying");
+        }
         return false;
     }
 

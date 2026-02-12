@@ -3,6 +3,9 @@
 #include <Adafruit_GPS.h>
 #include <Arduino.h>
 #include <DABShield.h>
+#include <LiquidCrystalIO.h>
+
+#include "Notification.h"
 
 /**
  * @brief Print a formatted local date/time from DAB to the serial console.
@@ -15,7 +18,7 @@
  * @author GOLETTA David
  * @date 12/02/2026
  */
-void printDabTime(DABTime& dabtime);
+void printDabTime(DABTime& dabtime, Notification& notifier);
 
 /**
  * @brief Print a formatted UTC date/time from GPS to the serial console.
@@ -28,7 +31,7 @@ void printDabTime(DABTime& dabtime);
  * @author GOLETTA David
  * @date 12/02/2026
  */
-void printGpsTime(Adafruit_GPS& GPS);
+void printGpsTime(Adafruit_GPS& GPS, Notification& notifier);
 
 /**
  * @brief Convert a calendar date to its day-of-week name.
@@ -61,3 +64,32 @@ String dateToDayOfTheWeek(uint16_t year, uint8_t month, uint8_t day, bool shortF
  * @date 12/02/2026
  */
 String formatTwoDigits(uint8_t value);
+
+/**
+ * @brief Print time and date on the LCD.
+ * @details
+ * Description:
+ *   Writes HH:MM:SS on the first line and scrolls the day/date on the second line.
+ *
+ * @param lcd Pointer to the LCD instance.
+ * @param hours Hours in range [0..23].
+ * @param minutes Minutes in range [0..59].
+ * @param seconds Seconds in range [0..59].
+ * @param day Day in range [1..31].
+ * @param month Month in range [1..12].
+ * @param year Full year (e.g., 2026).
+ */
+void printTimeDateOnScreen(LiquidCrystal* lcd, uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t day, uint8_t month,
+                           uint16_t year);
+
+/**
+ * @brief Display text on the LCD with optional scrolling.
+ * @details
+ * Description:
+ *   Prints short text as-is, splits medium text across two lines,
+ *   and scrolls longer text across both lines.
+ *
+ * @param lcd Pointer to the LCD instance.
+ * @param text Text to display.
+ */
+void displayLongText(LiquidCrystal* lcd, const String& text);
