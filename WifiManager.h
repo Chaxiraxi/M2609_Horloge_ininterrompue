@@ -44,7 +44,7 @@ class WiFiManager {
      * @author GOLETTA David
      * @date 12/02/2026
      */
-    void connectToWiFi(char* SSID = WIFI_SSID, String PASSWORD = WIFI_PASSWORD);
+    void connectToWiFi(const char* SSID = WIFI_SSID, const char* PASSWORD = WIFI_PASSWORD);
 
     /**
      * @brief Disconnect from the current Wi-Fi network.

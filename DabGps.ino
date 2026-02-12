@@ -9,9 +9,11 @@
 #include "Button.h"
 #include "DABTimeSource.h"
 #include "GPSTimeSource.h"
+#include "NTPTimeSource.h"
 #include "Notification.h"
 #include "PinDefinitions.h"
 #include "TimeSource.h"
+#include "WifiManager.h"
 #include "utils.h"
 
 SoftwareSerial gpsSerial(3, 4);
@@ -27,21 +29,22 @@ constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;
 const byte dabSpiSelectPin = 8;
 uint32_t lastTimePrintMs = 0;
 
-Notification serialNotifier;
+Notification Logger;
 SerialTransport serialTransport(115200);
+WiFiManager wifiManager(Logger);
 
 Button setButton(SET_BTN);
 LiquidCrystal lcd(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7, ioFrom23017(0x20));
 
-DABTimeSource dabTimeSource(Dab, dabtime, hasService, 0, &serialNotifier);
+DABTimeSource dabTimeSource(Dab, dabtime, hasService, 0, &Logger);
 GPSTimeSource gpsTimeSource(GPS, TIMEZONE_OFFSET_HOURS);
+NTPTimeSource ntpTimeSource("pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, &Logger);
 
 void setup() {
     // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
     // also spit it out
     serialTransport.init();
-    serialNotifier.addTransport(&serialTransport, Notification::DEBUG);
-    serialNotifier.info("Adafruit GPS library basic parsing test!");
+    Logger.addTransport(&serialTransport, Notification::DEBUG);
 
     // Reset the MCP23017 I/O expander to ensure it's in a known state (it can get into a bad state if power is removed while it's writing to its registers)
     pinMode(RESET_PIN_23017, OUTPUT);
@@ -54,13 +57,17 @@ void setup() {
     analogWriteResolution(12);
     analogWrite(SCREEN_CONTRAST_PIN, 600);
 
+    displayLongText(&lcd, "Connecting WiFi");
+    wifiManager.connectToWiFi();
+    ntpTimeSource.init();
     gpsTimeSource.init();
     displayLongText(&lcd, "Initializing DAB");
     dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
 
     // DEBUG
-    gpsTimeSource.setEnabled(true);
-    dabTimeSource.setEnabled(true);
+    gpsTimeSource.setEnabled(false);
+    dabTimeSource.setEnabled(false);
+    ntpTimeSource.setEnabled(true);
 }
 
 uint32_t timer = millis();
@@ -70,10 +77,10 @@ void loop() {
     if (setButton.isPressed()) {
         if (dabTimeSource.isEnabled()) {
             dabTimeSource.setEnabled(false);
-            serialNotifier.info("DAB time source disabled");
+            Logger.info("DAB time source disabled");
         } else {
             dabTimeSource.setEnabled(true);
-            serialNotifier.info("DAB time source enabled");
+            Logger.info("DAB time source enabled");
         }
     }
     // Drain GPS bytes as fast as possible. Reading only one byte per loop
@@ -105,11 +112,11 @@ void loop() {
         lastLcdUpdateMs = millis();
 
         if (dabTimeSource.getDateTime(dateTime)) {
-            printTimeDateOnScreen(&lcd, dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month,
-                                  dateTime.date.year);
+            printTimeDateOnScreen(&lcd, dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
+        } else if (ntpTimeSource.getDateTime(dateTime)) {
+            printTimeDateOnScreen(&lcd, dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
         } else if (gpsTimeSource.getDateTime(dateTime)) {
-            printTimeDateOnScreen(&lcd, dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month,
-                                  dateTime.date.year);
+            printTimeDateOnScreen(&lcd, dateTime.time.hour, dateTime.time.minute, dateTime.time.second, dateTime.date.day, dateTime.date.month, dateTime.date.year);
         } else {
             displayLongText(&lcd, "No time source found");
         }

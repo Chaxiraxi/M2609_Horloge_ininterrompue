@@ -7,8 +7,8 @@
 
 WiFiManager::WiFiManager(Notification& notification) : notification(notification) {}
 
-void WiFiManager::connectToWiFi(char* SSID, String PASSWORD) {
-    WiFi.begin(SSID, PASSWORD.c_str());
+void WiFiManager::connectToWiFi(const char* SSID, const char* PASSWORD) {
+    WiFi.begin(SSID, PASSWORD);
     notification.debug("Connecting to WiFi SSID: " + String(SSID));
     const unsigned long connectionTimeout = 20000;
     const unsigned long logInterval = 500;
