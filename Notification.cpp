@@ -30,36 +30,62 @@ void SerialTransport::send(const String& level, const String& message, unsigned 
     Serial.println("[" + timeString + "] [" + level + "] " + message);
 }
 
-Notification::Notification(Notification::Level level, NotificationTransport* transport)
-    : transport_(nullptr), ownsTransport_(false), currentLevel_(level), initTime_(millis()) {
-    if (transport) {
-        setTransport(transport, false);
-    } else {
-        setTransport(new SerialTransport(), true);
-    }
+Notification::Notification()
+    : bindingCount_(0), initTime_(millis()) {
 }
 
 Notification::~Notification() {
-    if (ownsTransport_ && transport_) {
-        delete transport_;
-        transport_ = nullptr;
+    clearTransports();
+}
+
+bool Notification::addTransport(NotificationTransport* transport, Notification::Level minLevel) {
+    if (transport == nullptr) {
+        return false;
     }
-}
 
-void Notification::setTransport(NotificationTransport* transport, bool takeOwnership) {
-    if (ownsTransport_ && transport_) {
-        delete transport_;
+    for (uint8_t i = 0; i < bindingCount_; ++i) {
+        if (bindings_[i].transport == transport) {
+            return false;
+        }
     }
-    transport_ = transport;
-    ownsTransport_ = takeOwnership;
+
+    if (bindingCount_ >= MAX_TRANSPORTS) {
+        return false;
+    }
+
+    bindings_[bindingCount_].transport = transport;
+    bindings_[bindingCount_].minLevel = minLevel;
+    ++bindingCount_;
+    return true;
 }
 
-void Notification::setLevel(Notification::Level level) {
-    currentLevel_ = level;
+bool Notification::removeTransport(NotificationTransport* transport) {
+    for (uint8_t i = 0; i < bindingCount_; ++i) {
+        if (bindings_[i].transport == transport) {
+            for (uint8_t j = i; j + 1 < bindingCount_; ++j) {
+                bindings_[j] = bindings_[j + 1];
+            }
+            --bindingCount_;
+            return true;
+        }
+    }
+
+    return false;
 }
 
-Notification::Level Notification::getLevel() const {
-    return currentLevel_;
+void Notification::clearTransports() {
+    bindingCount_ = 0;
+}
+
+bool Notification::setTransportLevel(NotificationTransport* transport, Notification::Level minLevel) {
+    for (uint8_t i = 0; i < bindingCount_; ++i) {
+        if (bindings_[i].transport == transport) {
+            bindings_[i].minLevel = minLevel;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // clang-format off
@@ -75,11 +101,13 @@ String Notification::levelToString(Notification::Level level) {
 // clang-format on
 
 void Notification::send(Notification::Level level, const String& message) {
-    // drop messages below the configured level
-    if (level < currentLevel_) return;
+    const String levelText = levelToString(level);
+    const unsigned long timestamp = millis() - initTime_;
 
-    if (transport_) {
-        transport_->send(levelToString(level), message, millis() - initTime_);
+    for (uint8_t i = 0; i < bindingCount_; ++i) {
+        if (bindings_[i].transport != nullptr && level >= bindings_[i].minLevel) {
+            bindings_[i].transport->send(levelText, message, timestamp);
+        }
     }
 }
 
