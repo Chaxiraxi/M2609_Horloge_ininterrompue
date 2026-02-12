@@ -11,6 +11,7 @@
 #include "GPSTimeSource.h"
 #include "PinDefinitions.h"
 #include "TimeSource.h"
+#include "utils.h"
 
 SoftwareSerial gpsSerial(3, 4);
 Adafruit_GPS GPS(&gpsSerial);
@@ -32,100 +33,13 @@ LiquidCrystal lcd(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7, ioFrom23017(0x
 DABTimeSource dabTimeSource(Dab, dabtime, hasService);
 GPSTimeSource gpsTimeSource(GPS, TIMEZONE_OFFSET_HOURS);
 
-void printDabTime() {
-    Serial.print(F("Local Time (DAB): "));
-    Serial.print(dabtime.Days);
-    Serial.print('/');
-    Serial.print(dabtime.Months);
-    Serial.print('/');
-    Serial.print(dabtime.Year);
-    Serial.print(' ');
-    if (dabtime.Hours < 10) {
-        Serial.print('0');
-    }
-    Serial.print(dabtime.Hours);
-    Serial.print(':');
-    if (dabtime.Minutes < 10) {
-        Serial.print('0');
-    }
-    Serial.print(dabtime.Minutes);
-    Serial.print(':');
-    if (dabtime.Seconds < 10) {
-        Serial.print('0');
-    }
-    Serial.println(dabtime.Seconds);
-}
-
-void printGpsTime() {
-    Serial.print("\nUTC Time (GPS): ");
-    Serial.print(GPS.day);
-    Serial.print('/');
-    Serial.print(GPS.month);
-    Serial.print('/');
-    Serial.print(GPS.year);
-    Serial.print(' ');
-
-    if (GPS.hour < 10) {
-        Serial.print('0');
-    }
-    Serial.print(GPS.hour, DEC);
-    Serial.print(':');
-    if (GPS.minute < 10) {
-        Serial.print('0');
-    }
-    Serial.print(GPS.minute, DEC);
-    Serial.print(':');
-    if (GPS.seconds < 10) {
-        Serial.print('0');
-    }
-    Serial.print(GPS.seconds, DEC);
-    Serial.print('.');
-    if (GPS.milliseconds < 10) {
-        Serial.print("00");
-    } else if (GPS.milliseconds > 9 && GPS.milliseconds < 100) {
-        Serial.print("0");
-    }
-    Serial.println(GPS.milliseconds);
-}
-
-void printTwoDigits(uint8_t value) {
-    if (value < 10) {
-        lcd.print('0');
-    }
-    lcd.print(value, DEC);
-}
-
-// clang-format off
-String dateToDayOfTheWeek(uint16_t year, uint8_t month, uint8_t day, bool shortForm = false) {
-    // Zeller's Congruence algorithm
-    if (month < 3) {
-        month += 12;
-        year -= 1;
-    }
-    uint16_t k = year % 100;
-    uint16_t j = year / 100;
-    uint8_t h = (day + (13 * (month + 1)) / 5 + k + (k / 4) + (j / 4) - (2 * j)) % 7;
-
-    switch (h) {
-        case 0: return shortForm ? "Sat" : "Saturday";
-        case 1: return shortForm ? "Sun" : "Sunday";
-        case 2: return shortForm ? "Mon" : "Monday";
-        case 3: return shortForm ? "Tue" : "Tuesday";
-        case 4: return shortForm ? "Wed" : "Wednesday";
-        case 5: return shortForm ? "Thu" : "Thursday";
-        case 6: return shortForm ? "Fri" : "Friday";
-        default: return "";
-    }
-}
-// clang-format on
-
 void printTimeDateOnScreen(uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t day, uint8_t month, uint16_t year) {
     lcd.setCursor(0, 0);
-    printTwoDigits(hours);
+    lcd.print(formatTwoDigits(hours));
     lcd.print(':');
-    printTwoDigits(minutes);
+    lcd.print(formatTwoDigits(minutes));
     lcd.print(':');
-    printTwoDigits(seconds);
+    lcd.print(formatTwoDigits(seconds));
     lcd.print("        ");
 
     // Manual scrolling implementation for second line
