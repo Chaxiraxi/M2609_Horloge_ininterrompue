@@ -118,6 +118,7 @@ void setup() {
     analogWrite(SCREEN_CONTRAST_PIN, 600);
 
     gpsTimeSource.init();
+    displayLongText("Initializing DAB");
     dabTimeSource.init(dabSpiSelectPin, SPEAKER_OUTPUT);
 
     // DEBUG
