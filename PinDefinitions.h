@@ -6,4 +6,3 @@
 #define LCD_D6 12
 #define LCD_D7 13
 #define RESET_PIN_23017 5
-#define DAB_SPI_SELECT_PIN 7
