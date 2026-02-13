@@ -1,7 +1,6 @@
 #include "WifiManager.h"
 
-#include <WiFi.h>
-#include <WiFiSSLClient.h>  // Replace with the correct WiFi library for your board
+#include <WiFiS3.h>
 
 #include "Notification.h"
 
