@@ -103,4 +103,6 @@ class DABTimeSource : public TimeSource {
     int8_t timezoneOffsetHours_;
     Notification* notifier_;
     uint8_t tunedServiceIndex_ = 0;
+    DateTimeFields cachedDateTime_{};
+    bool hasCachedDateTime_ = false;
 };

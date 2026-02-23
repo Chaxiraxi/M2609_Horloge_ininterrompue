@@ -67,7 +67,13 @@ bool DABTimeSource::getDateTime(DateTimeFields& out) {
 
     static uint32_t lastStatusCheckMs = 0;
     static uint32_t statusCheckIntervalMs = 1000;
-    if (millis() - lastStatusCheckMs < statusCheckIntervalMs) return isSaneDateTime();
+    if (millis() - lastStatusCheckMs < statusCheckIntervalMs) {
+        if (hasCachedDateTime_ && isSaneDateTime()) {
+            out = cachedDateTime_;
+            return true;
+        }
+        return false;
+    }
 
     if (isSaneDateTime()) {
         statusCheckIntervalMs = 1000;  // Reset to default interval on success
@@ -118,6 +124,9 @@ bool DABTimeSource::getDateTime(DateTimeFields& out) {
     out.time.hour = wrapHours(static_cast<int32_t>(dabtime_.Hours) + timezoneOffsetHours_);
     out.time.minute = dabtime_.Minutes;
     out.time.second = dabtime_.Seconds;
+
+    cachedDateTime_ = out;
+    hasCachedDateTime_ = true;
 
     return true;
 }
