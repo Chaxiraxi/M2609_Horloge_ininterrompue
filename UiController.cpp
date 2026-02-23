@@ -20,10 +20,10 @@ UiController::UiController(LiquidCrystal& lcd, Button& setButton,
 }
 
 void UiController::begin() {
-    // Configure MCP23017 pins as inputs with pull-ups
-    ioDevicePinMode(mcpIo_, MCP_CFG_BTN, INPUT_PULLUP);
-    ioDevicePinMode(mcpIo_, MCP_ENC_A, INPUT_PULLUP);
-    ioDevicePinMode(mcpIo_, MCP_ENC_B, INPUT_PULLUP);
+    // Configure MCP23017 pins as inputs
+    ioDevicePinMode(mcpIo_, MCP_CFG_BTN, INPUT);
+    ioDevicePinMode(mcpIo_, MCP_ENC_A, INPUT);
+    ioDevicePinMode(mcpIo_, MCP_ENC_B, INPUT);
     ioDeviceSync(mcpIo_);
 
     // Initialise encoder last state
@@ -76,9 +76,10 @@ void UiController::readInputs() {
 
     // --- CFG button (MCP23017 pin, manual polling with debounce) ---
     ioDeviceSync(mcpIo_);
-    bool cfgNow = (ioDeviceDigitalRead(mcpIo_, MCP_CFG_BTN) == LOW);  // active-low
-    cfgPressed_ = (cfgNow && !cfgLast_);                              // rising edge
-    cfgReleased_ = (!cfgNow && cfgLast_);                             // falling edge
+    bool cfgNow = (ioDeviceDigitalRead(mcpIo_, MCP_CFG_BTN) == HIGH);  // active-high
+    cfgPressed_ = (cfgNow && !cfgLast_);                               // rising edge
+    cfgReleased_ = (!cfgNow && cfgLast_);                              // falling edge
+    logger_->debug("CFG raw: " + String(cfgNow) + " pressed: " + String(cfgPressed_) + " released: " + String(cfgReleased_));
     if (cfgPressed_) {
         cfgPressStartMs_ = millis();
     }
