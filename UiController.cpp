@@ -58,6 +58,7 @@ void UiController::update() {
 // Input reading
 // =========================================================================
 
+// TODO: Fix the 3s SET long-press detection (currently instant changes to the source selection mode before waiting for a potential 3s press that should trigger manual config mode)
 void UiController::readInputs() {
     // --- SET button (GPIO, handled by Button class) ---
     setButton_.updateState();
@@ -79,7 +80,6 @@ void UiController::readInputs() {
     bool cfgNow = (ioDeviceDigitalRead(mcpIo_, MCP_CFG_BTN) == HIGH);  // active-high
     cfgPressed_ = (cfgNow && !cfgLast_);                               // rising edge
     cfgReleased_ = (!cfgNow && cfgLast_);                              // falling edge
-    logger_->debug("CFG raw: " + String(cfgNow) + " pressed: " + String(cfgPressed_) + " released: " + String(cfgReleased_));
     if (cfgPressed_) {
         cfgPressStartMs_ = millis();
     }

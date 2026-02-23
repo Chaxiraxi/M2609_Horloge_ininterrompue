@@ -98,6 +98,7 @@ int8_t TimeCoordinator::activeSourceIndex() const {
 // Coherence — median of the two other sources
 // ---------------------------------------------------------------------------
 
+// TODO: Validate this function since it always marks 2 sources as incoherent
 void TimeCoordinator::checkCoherence() {
     // We need at least 2 valid sources to perform any coherence check.
     uint8_t validCount = 0;
