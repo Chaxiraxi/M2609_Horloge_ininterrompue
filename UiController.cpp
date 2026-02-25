@@ -124,6 +124,8 @@ bool UiController::setLongPressed() const {
 
 int8_t UiController::encoderDelta() const { return encDelta_; }
 
+bool UiController::cfgReleased() const { return cfgReleased_; }
+
 // =========================================================================
 // Mode: DisplayDateTime
 // =========================================================================
@@ -150,7 +152,7 @@ void UiController::handleDisplayDateTime() {
         return;
     }
 
-    if (cfgPressed()) {
+    if (cfgReleased()) {
         // Enter source selection mode
         if (logger_) logger_->debug("Entering source selection mode");
         mode_ = Mode::SourceSelection;
@@ -198,9 +200,10 @@ void UiController::handleErrorPresent() {
 
 void UiController::handleSourceSelection() {
     // CFG pressed again → exit source selection
-    if (cfgPressed()) {
+    if (cfgReleased()) {
         mode_ = Mode::DisplayDateTime;
         lcd_.clear();
+        if (logger_) logger_->debug("Exiting source selection mode");
         return;
     }
 
@@ -236,10 +239,16 @@ void UiController::handleManualConfig() {
     }
 
     // CFG pressed → save and exit
-    if (cfgPressed()) {
+    static bool exit_debounced = false;
+    if (cfgReleased()) {
+        if (!exit_debounced) {
+            exit_debounced = true;  // ignore the first release (from entering the mode)
+            return;
+        }
         coordinator_.setManualDateTime(manualDt_);
         mode_ = Mode::DisplayDateTime;
         lcd_.clear();
+        exit_debounced = false;  // reset debounce for next entry
         return;
     }
 

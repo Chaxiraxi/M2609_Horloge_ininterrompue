@@ -77,6 +77,7 @@ class UiController {
     bool cfgLongPressed() const;
     bool setPressed() const;
     bool setLongPressed() const;
+    bool cfgReleased() const;
     int8_t encoderDelta() const;
 
     // --- Mode handlers ---------------------------------------------------
