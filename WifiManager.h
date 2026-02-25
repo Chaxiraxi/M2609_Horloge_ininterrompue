@@ -36,7 +36,7 @@ class WiFiManager {
      * @details
      * Description:
      *   Attempts to connect to the provided SSID/password, emits periodic logs while waiting,
-     *   and reports success, failure, and firmware-version status.
+     *   and reports success, firmware-version status, and fallback-access-point startup on failure.
      *
      * @param SSID SSID name of the Wi-Fi network.
      * @param PASSWORD Password for the Wi-Fi network.
@@ -58,6 +58,17 @@ class WiFiManager {
     void disconnectWiFi();
 
    private:
+    /**
+     * @brief Start an open fallback access point when station connection fails.
+     * @details
+     * Description:
+     *   Initializes a board-hosted open Wi-Fi network so nearby devices can connect for recovery.
+     *
+     * @author GOLETTA David
+     * @date 25/02/2026
+     */
+    void startFallbackAccessPoint();
+
     Notification& notification;
 };
 

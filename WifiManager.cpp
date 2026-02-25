@@ -6,6 +6,12 @@
 
 WiFiManager::WiFiManager(Notification& notification) : notification(notification) {}
 
+namespace {
+String ipToString(const IPAddress& ip) {
+    return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
+}
+}  // namespace
+
 void WiFiManager::connectToWiFi(const char* SSID, const char* PASSWORD) {
     WiFi.begin(SSID, PASSWORD);
     notification.debug("Connecting to WiFi SSID: " + String(SSID));
@@ -37,7 +43,22 @@ void WiFiManager::connectToWiFi(const char* SSID, const char* PASSWORD) {
             notification.warning("WiFi firmware is outdated. Consider updating to the latest version. (Current version: " + firmwareVersion + ", Latest version: " + WIFI_FIRMWARE_LATEST_VERSION + ")");
         }
     } else {
-        notification.error("Failed to connect to WiFi.");
+        notification.error("Failed to connect to WiFi. Starting fallback open access point.");
+        startFallbackAccessPoint();
+    }
+}
+
+void WiFiManager::startFallbackAccessPoint() {
+    const char* fallbackSsid = "DabGps-Setup";
+
+    WiFi.disconnect();
+    int apStatus = WiFi.beginAP(fallbackSsid);
+
+    if (apStatus == WL_AP_LISTENING || apStatus == WL_AP_CONNECTED) {
+        notification.info("Fallback AP started. SSID: " + String(fallbackSsid));
+        notification.info("Connect to AP and reach device at " + ipToString(WiFi.localIP()));
+    } else {
+        notification.error("Failed to start fallback AP.");
     }
 }
 
