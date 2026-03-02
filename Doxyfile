@@ -9,6 +9,7 @@ RECURSIVE              = YES
 FILE_PATTERNS          = *.h *.hpp *.c *.cpp *.ino *.md
 MARKDOWN_SUPPORT       = YES
 EXTENSION_MAPPING      = ino=C++
+EXCLUDE                = README-fr.md
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = YES
 EXTRACT_STATIC         = YES

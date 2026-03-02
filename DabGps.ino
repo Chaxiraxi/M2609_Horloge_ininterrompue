@@ -1,3 +1,11 @@
+/**
+ * @file DabGps.ino
+ * @brief Main entry point for the M2609 Uninterrupted Clock project.
+ * @details Handles hardware orchestration, system setup, and the main execution loop.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ */
 #include <Adafruit_GPS.h>
 #include <DABShield.h>
 #include <IoAbstractionWire.h>
