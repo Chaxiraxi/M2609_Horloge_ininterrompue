@@ -73,6 +73,7 @@ Do not introduce alternate architecture patterns unless explicitly requested.
 - Keep functions short and purpose-specific.
 - Prefer explicit validation for external data (GPS/NTP/DAB fields).
 - Guard every hardware/network dependent path with failure handling.
+- NEVER add blocking segments (busy waits, long polling loops, or blocking delays) in runtime paths; all logic must stay non-blocking so concurrent timing-sensitive protocols (I2C, UART, timers) keep running reliably.
 - Add no dead code, no speculative abstractions, no unrelated cleanup.
 
 ---
