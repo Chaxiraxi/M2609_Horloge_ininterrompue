@@ -71,6 +71,7 @@ class RestApiServer {
     String getParam(const String& body, const String& key) const;
 
     void sendResponse(WiFiClient& client, int code, const String& contentType, const String& body) const;
+    void sendResponse(WiFiClient& client, int code, const String& contentType, const char* body) const;
     void sendStatus(WiFiClient& client) const;
     void sendWebPage(WiFiClient& client) const;
 

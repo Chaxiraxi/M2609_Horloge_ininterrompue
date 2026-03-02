@@ -974,6 +974,13 @@ void RestApiServer::update() {
         return;
     }
 
+    if (method == "GET" && path == "/favicon.ico") {
+        if (notifier_) notifier_->debug("Favicon requested, sending 404");
+        sendResponse(client, 404, "text/plain", "Not Found");
+        client.stop();
+        return;
+    }
+
     if (notifier_) notifier_->debug("Unknown request, sending default response");
     sendResponse(client, 200, "text/plain", "Arduino UNO R4 WiFi - Server active.");
     client.stop();
@@ -1148,9 +1155,15 @@ String RestApiServer::getParam(const String& body, const String& key) const {
  * @endinternal
  */
 void RestApiServer::sendResponse(WiFiClient& client, int code, const String& contentType, const String& body) const {
+    sendResponse(client, code, contentType, body.c_str());
+}
+
+void RestApiServer::sendResponse(WiFiClient& client, int code, const String& contentType, const char* body) const {
     String status = "200 OK";
     if (code == 204) {
         status = "204 No Content";
+    } else if (code == 404) {
+        status = "404 Not Found";
     }
 
     client.println("HTTP/1.1 " + status);
@@ -1161,7 +1174,7 @@ void RestApiServer::sendResponse(WiFiClient& client, int code, const String& con
     client.println("Connection: close");
     client.println();
 
-    if (body.length() > 0) {
+    if (body && body[0] != '\0') {
         client.println(body);
     }
 }
@@ -1206,7 +1219,7 @@ void RestApiServer::sendStatus(WiFiClient& client) const {
  * @endinternal
  */
 void RestApiServer::sendWebPage(WiFiClient& client) const {
-    sendResponse(client, 200, "text/html", String(kWebPage));
+    sendResponse(client, 200, "text/html", kWebPage);
 }
 
 /**
