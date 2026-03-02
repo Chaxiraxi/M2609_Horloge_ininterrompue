@@ -1,5 +1,4 @@
-#ifndef BUTTON_H
-#define BUTTON_H
+#pragma once
 
 /**
  * @file Button.h
@@ -18,6 +17,9 @@ class Button {
    public:
     /**
      * @brief Construct a new Button object
+     * @details
+     * Description:
+     *   Stores the GPIO pin number and initializes internal button state tracking.
      *
      * @param pin The pin number to which the button is connected
      *
@@ -41,6 +43,9 @@ class Button {
 
     /**
      * @brief Update the current state of the button
+     * @details
+     * Description:
+     *   Samples the input pin and updates the internal state machine for edge/hold detection.
      *
      * @note This method must be called exactly once per loop to ensure correct state tracking.
      *
@@ -51,6 +56,9 @@ class Button {
 
     /**
      * @brief Get the current state of the button
+     * @details
+     * Description:
+     *   Returns the current state computed by the latest call to updateState().
      *
      * @return State The current state of the button
      *
@@ -61,6 +69,9 @@ class Button {
 
     /**
      * @brief Check if the button is currently pressed
+     * @details
+     * Description:
+     *   Reports whether the current state corresponds to a press edge.
      *
      * @return true if the button is pressed (rising edge), false otherwise
      *
@@ -71,6 +82,9 @@ class Button {
 
     /**
      * @brief Check if the button is currently released
+     * @details
+     * Description:
+     *   Reports whether the current state corresponds to a release edge.
      *
      * @return true if the button is released (falling edge), false otherwise
      *
@@ -81,6 +95,9 @@ class Button {
 
     /**
      * @brief Check if the button is currently held
+     * @details
+     * Description:
+     *   Reports whether the button remains continuously pressed.
      *
      * @return true if the button is held, false otherwise
      *
@@ -91,6 +108,9 @@ class Button {
 
     /**
      * @brief Check if the button is currently idle
+     * @details
+     * Description:
+     *   Reports whether the button is currently not pressed and no edge is active.
      *
      * @return true if the button is idle, false otherwise
      *
@@ -104,5 +124,3 @@ class Button {
     State _lastState;
     State _currentState;
 };
-
-#endif  // BUTTON_H

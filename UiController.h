@@ -41,6 +41,10 @@ class UiController {
 
     /**
      * @brief Construct the UI controller.
+     * @details
+     * Description:
+     *   Stores hardware references and initializes controller state for LCD rendering,
+     *   source selection, and manual time configuration.
      *
      * @param lcd          Reference to the 8×2 LiquidCrystal display.
      * @param setButton    Reference to the SET GPIO button.
@@ -49,6 +53,9 @@ class UiController {
      * @param sourceCount  Number of sources.
      * @param mcpIo        IoAbstractionRef for the MCP23017 at address 0x20.
      * @param logger       Optional logger for debug/warning messages.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     UiController(LiquidCrystal& lcd, Button& setButton,
                  TimeCoordinator& coordinator,
@@ -57,16 +64,36 @@ class UiController {
 
     /**
      * @brief One-time setup (pin modes for MCP inputs).
+     * @details
+     * Description:
+     *   Configures input modes and initial states for UI controls connected to the MCP23017.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void begin();
 
     /**
      * @brief Call every loop iteration to process inputs and refresh the display.
+     * @details
+     * Description:
+     *   Polls buttons/encoder, applies state-machine transitions, and redraws the LCD as needed.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void update();
 
     /**
      * @brief Current UI mode (for external inspection / debugging).
+     * @details
+     * Description:
+     *   Returns the current state-machine mode used by the controller.
+     *
+     * @return Current UiController::Mode value.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     Mode currentMode() const { return mode_; }
 

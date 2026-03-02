@@ -88,6 +88,19 @@ bool Notification::setTransportLevel(NotificationTransport* transport, Notificat
     return false;
 }
 
+/**
+ * @internal
+ * @brief Convert a notification level enum to fixed-width text.
+ * @details
+ * Produces stable textual labels used by transports to render level prefixes.
+ *
+ * @param level Notification level value.
+ * @return String label associated with the given level.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 // clang-format off
 String Notification::levelToString(Notification::Level level) {
     switch (level) {

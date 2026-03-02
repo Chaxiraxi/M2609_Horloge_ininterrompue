@@ -18,12 +18,48 @@
  */
 class RestApiServer {
    public:
+    /**
+     * @brief Construct the REST API server.
+     * @details
+     * Description:
+     *   Stores references to the coordinator and source list, configures the HTTP listening port,
+     *   and optionally enables notification logging.
+     *
+     * @param coordinator Reference to the time coordinator used by API handlers.
+     * @param sources Array of pointers to time sources.
+     * @param sourceCount Number of entries in the sources array.
+     * @param notifier Optional notifier used for request/status logging.
+     * @param port TCP port used by the embedded HTTP server.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
+     */
     RestApiServer(TimeCoordinator& coordinator,
                   TimeSource* sources[], uint8_t sourceCount,
                   Notification* notifier = nullptr,
                   uint16_t port = 80);
 
+    /**
+     * @brief Start the embedded HTTP server.
+     * @details
+     * Description:
+     *   Initializes the underlying WiFiServer so incoming client connections can be accepted.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
+     */
     void begin();
+
+    /**
+     * @brief Process pending HTTP clients and requests.
+     * @details
+     * Description:
+     *   Polls the server, reads requests, dispatches handlers, and writes responses.
+     *   This method is intended to be called regularly from loop().
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
+     */
     void update();
 
    private:

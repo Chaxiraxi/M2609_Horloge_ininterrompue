@@ -1,5 +1,4 @@
-#ifndef WIFI_MANAGER_H
-#define WIFI_MANAGER_H
+#pragma once
 
 #include <Arduino.h>
 
@@ -71,5 +70,3 @@ class WiFiManager {
 
     Notification& notification;
 };
-
-#endif  // WIFI_MANAGER_H

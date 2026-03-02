@@ -7,12 +7,39 @@
 #endif
 
 namespace {
+/**
+ * @internal
+ * @brief Check leap-year status for Gregorian dates.
+ * @details
+ * Applies the 400/100/4 divisibility rules used by the Gregorian calendar.
+ *
+ * @param year Full year value.
+ * @return True if the provided year is a leap year.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool isLeapYear(uint16_t year) {
     if (year % 400 == 0) return true;
     if (year % 100 == 0) return false;
     return (year % 4 == 0);
 }
 
+/**
+ * @internal
+ * @brief Return the number of days in a month.
+ * @details
+ * Computes month length and accounts for leap-year February.
+ *
+ * @param year Full year value.
+ * @param month Month number in the range [1..12].
+ * @return Number of days in the requested month.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 uint8_t daysInMonth(uint16_t year, uint8_t month) {
     static const uint8_t kDaysPerMonth[12] = {
         31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -31,10 +58,36 @@ void NTPTimeSource::init() {
     }
 }
 
+/**
+ * @internal
+ * @brief Check current Wi-Fi connection state.
+ * @details
+ * Returns whether the board network interface is currently associated.
+ *
+ * @return True if Wi-Fi is connected; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool NTPTimeSource::isWiFiConnected() const {
     return WiFi.status() == WL_CONNECTED;
 }
 
+/**
+ * @internal
+ * @brief Convert epoch seconds into DateTimeFields.
+ * @details
+ * Decomposes Unix epoch seconds into calendar date and clock fields.
+ *
+ * @param epochSeconds Unix epoch value in seconds.
+ * @param out Destination structure to fill with converted values.
+ * @return True on successful conversion; false when input epoch is zero.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool NTPTimeSource::epochToDateTime(uint32_t epochSeconds, DateTimeFields& out) const {
     if (epochSeconds == 0) return false;
 

@@ -99,6 +99,18 @@ int8_t TimeCoordinator::activeSourceIndex() const {
 // ---------------------------------------------------------------------------
 
 // TODO: Validate this function since it always marks 2 sources as incoherent
+/**
+ * @internal
+ * @brief Evaluate source coherence against peers.
+ * @details
+ * For each valid source, computes a median reference from other valid sources and
+ * marks the source incoherent when its deviation exceeds `COHERENCE_THRESHOLD_S`.
+ * Updates per-source error flags accordingly.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void TimeCoordinator::checkCoherence() {
     // We need at least 2 valid sources to perform any coherence check.
     uint8_t validCount = 0;
@@ -183,6 +195,17 @@ void TimeCoordinator::checkCoherence() {
 // Select best source (highest priority = lowest index) among valid + coherent
 // ---------------------------------------------------------------------------
 
+/**
+ * @internal
+ * @brief Select the active source from coherent candidates.
+ * @details
+ * Chooses the first source by priority order that is both valid and coherent, and
+ * updates the global no-source error when none is suitable.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void TimeCoordinator::selectBestSource() {
     activeSource_ = -1;
 
@@ -207,6 +230,17 @@ void TimeCoordinator::selectBestSource() {
 // Software clock — keeps time ticking between sync cycles
 // ---------------------------------------------------------------------------
 
+/**
+ * @internal
+ * @brief Refresh software-clock reference from active source.
+ * @details
+ * When an active source exists, stores its epoch as the new reference point and
+ * records the current `millis()` timestamp used for elapsed-time extrapolation.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void TimeCoordinator::updateSoftwareClock() {
     if (activeSource_ >= 0) {
         referenceEpoch_ = sourceEpoch_[activeSource_];

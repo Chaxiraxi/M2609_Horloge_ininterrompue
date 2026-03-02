@@ -59,6 +59,17 @@ void UiController::update() {
 // =========================================================================
 
 // TODO: Fix the 3s SET long-press detection (currently instant changes to the source selection mode before waiting for a potential 3s press that should trigger manual config mode)
+/**
+ * @internal
+ * @brief Poll and decode all UI inputs.
+ * @details
+ * Updates SET/CFG button edge and long-press states, synchronizes MCP23017 inputs,
+ * and computes encoder movement delta from Gray-code transitions.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::readInputs() {
     // --- SET button (GPIO, handled by Button class) ---
     setButton_.updateState();
@@ -108,28 +119,111 @@ void UiController::readInputs() {
     }
 }
 
+/**
+ * @internal
+ * @brief Report CFG pressed edge state.
+ * @details
+ * Returns whether a CFG rising edge was detected during the current cycle.
+ *
+ * @return True if CFG has just been pressed; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool UiController::cfgPressed() const { return cfgPressed_; }
 
+/**
+ * @internal
+ * @brief Check whether CFG long-press threshold is reached.
+ * @details
+ * Evaluates held state and press duration against `LONG_PRESS_MS`.
+ *
+ * @return True when CFG is currently held long enough; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool UiController::cfgLongPressed() const {
     return cfgHeld_ && (millis() - cfgPressStartMs_ >= LONG_PRESS_MS);
 }
 
+/**
+ * @internal
+ * @brief Report SET pressed edge state.
+ * @details
+ * Returns whether a SET rising edge is currently active.
+ *
+ * @return True if SET has just been pressed; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool UiController::setPressed() const {
     return setButton_.isPressed();
 }
 
+/**
+ * @internal
+ * @brief Report SET long-press state.
+ * @details
+ * Returns the internal long-press flag computed from button hold duration.
+ *
+ * @return True when SET long press is considered active; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool UiController::setLongPressed() const {
     return setHeld_;
 }
 
+/**
+ * @internal
+ * @brief Get encoder delta for current cycle.
+ * @details
+ * Returns signed movement computed from the latest quadrature transition.
+ *
+ * @return Encoder movement delta (-1, 0, or +1 for half-step decoding).
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 int8_t UiController::encoderDelta() const { return encDelta_; }
 
+/**
+ * @internal
+ * @brief Report CFG release edge state.
+ * @details
+ * Returns whether a CFG falling edge was detected during the current cycle.
+ *
+ * @return True if CFG has just been released; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool UiController::cfgReleased() const { return cfgReleased_; }
 
 // =========================================================================
 // Mode: DisplayDateTime
 // =========================================================================
 
+/**
+ * @internal
+ * @brief Handle UI logic in normal date/time display mode.
+ * @details
+ * Processes transitions to error, source selection, and manual configuration modes,
+ * triggers manual sync on SET press, and renders default clock view.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::handleDisplayDateTime() {
     // Transitions
     if (coordinator_.errors().hasActiveError()) {
@@ -173,6 +267,17 @@ void UiController::handleDisplayDateTime() {
 // Mode: ErrorPresent
 // =========================================================================
 
+/**
+ * @internal
+ * @brief Handle UI logic while an error is active.
+ * @details
+ * Displays the highest-priority active error and acknowledges all errors when SET is pressed.
+ * Automatically returns to display mode once no active error remains.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::handleErrorPresent() {
     // If no more active errors, return to display
     if (!coordinator_.errors().hasActiveError()) {
@@ -198,6 +303,16 @@ void UiController::handleErrorPresent() {
 // Mode: SourceSelection
 // =========================================================================
 
+/**
+ * @internal
+ * @brief Handle UI logic in source selection mode.
+ * @details
+ * Supports source navigation with encoder, enable/disable toggling with SET, and mode exit on CFG release.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::handleSourceSelection() {
     // CFG pressed again → exit source selection
     if (cfgReleased()) {
@@ -230,6 +345,17 @@ void UiController::handleSourceSelection() {
 // Mode: ManualConfig
 // =========================================================================
 
+/**
+ * @internal
+ * @brief Handle UI logic in manual date/time configuration mode.
+ * @details
+ * Applies field navigation and editing, supports cancel on SET long press, and saves
+ * the configured date-time on CFG release after debounce.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::handleManualConfig() {
     // Long press SET (3 s) → exit without saving
     if (setLongPressed()) {
@@ -305,6 +431,17 @@ void UiController::handleManualConfig() {
 // Rendering
 // =========================================================================
 
+/**
+ * @internal
+ * @brief Render default date/time screen.
+ * @details
+ * Throttles redraw frequency, shows current coordinator time when available,
+ * or displays a fallback message when no valid time is present.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::renderDateTime() {
     if (millis() - lastRenderMs_ < RENDER_INTERVAL_MS) return;
     lastRenderMs_ = millis();
@@ -318,6 +455,18 @@ void UiController::renderDateTime() {
     }
 }
 
+/**
+ * @internal
+ * @brief Render current synchronization error on LCD.
+ * @details
+ * Draws a compact two-line error view and pads label text to fit the 8-character display width.
+ *
+ * @param err Pointer to the error entry to display.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::renderError(const SyncError* err) {
     if (millis() - lastRenderMs_ < RENDER_INTERVAL_MS) return;
     lastRenderMs_ = millis();
@@ -332,6 +481,16 @@ void UiController::renderError(const SyncError* err) {
     lcd_.print(lbl.substring(0, 8));
 }
 
+/**
+ * @internal
+ * @brief Render source selection screen.
+ * @details
+ * Displays selected source name and enabled/disabled state with fixed-width padding.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::renderSourceSelection() {
     if (millis() - lastRenderMs_ < RENDER_INTERVAL_MS) return;
     lastRenderMs_ = millis();
@@ -351,6 +510,16 @@ void UiController::renderSourceSelection() {
     }
 }
 
+/**
+ * @internal
+ * @brief Render manual configuration screen.
+ * @details
+ * Displays current editable field on the first line and the corresponding value on the second line.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void UiController::renderManualConfig() {
     if (millis() - lastRenderMs_ < RENDER_INTERVAL_MS) return;
     lastRenderMs_ = millis();
@@ -396,6 +565,19 @@ void UiController::renderManualConfig() {
 // Helpers
 // =========================================================================
 
+/**
+ * @internal
+ * @brief Resolve source index to display name.
+ * @details
+ * Converts internal source index values into short labels used in the UI.
+ *
+ * @param index Source index value.
+ * @return Constant string label associated with the index.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 const char* UiController::sourceName(uint8_t index) const {
     switch (index) {
         case 0:

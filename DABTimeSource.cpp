@@ -39,6 +39,19 @@ bool DABTimeSource::init(uint8_t spiSelectPin, uint8_t speakerOutput, uint8_t ba
     return hasService_;
 }
 
+/**
+ * @internal
+ * @brief Tune to the first available DAB service.
+ * @details
+ * Iterates over known DAB frequencies, validates service availability, and selects
+ * the first valid service index for subsequent time retrieval.
+ *
+ * @return True when a valid service is found and selected; false otherwise.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool DABTimeSource::tuneFirstAvailableService() {
     for (uint8_t freq_index = 0; freq_index < DAB_FREQS; freq_index++) {
         dab_.tune(freq_index);

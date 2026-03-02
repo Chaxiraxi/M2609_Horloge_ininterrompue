@@ -21,9 +21,15 @@ namespace TimeMath {
 
 /**
  * @brief Check whether a year is a leap year.
+ * @details
+ * Description:
+ *   Applies Gregorian calendar leap-year rules to the provided year value.
  *
  * @param year Full year (e.g. 2026).
  * @return True if the year is a leap year.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
  */
 inline bool isLeapYear(uint16_t year) {
     if (year % 400 == 0) return true;
@@ -33,10 +39,16 @@ inline bool isLeapYear(uint16_t year) {
 
 /**
  * @brief Number of days in a given month.
+ * @details
+ * Description:
+ *   Returns the month length and handles leap-year February for the given year.
  *
  * @param year Full year (for leap-year February check).
  * @param month Month number 1-12.
  * @return Number of days (28-31).
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
  */
 inline uint8_t daysInMonth(uint16_t year, uint8_t month) {
     static const uint8_t kDaysPerMonth[12] = {
@@ -48,9 +60,15 @@ inline uint8_t daysInMonth(uint16_t year, uint8_t month) {
 
 /**
  * @brief Convert DateTimeFields to a Unix-style epoch (seconds since 1970-01-01 00:00:00 UTC).
+ * @details
+ * Description:
+ *   Computes elapsed whole days and time-of-day seconds to produce a Unix-style epoch value.
  *
  * @param dt DateTimeFields to convert.
  * @return Epoch in seconds. Returns 0 if the date/time is clearly invalid.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
  */
 inline uint32_t toEpoch(const DateTimeFields& dt) {
     if (dt.date.year < 1970 || dt.date.month == 0 || dt.date.month > 12 ||
@@ -83,9 +101,15 @@ inline uint32_t toEpoch(const DateTimeFields& dt) {
 
 /**
  * @brief Convert a Unix epoch to DateTimeFields.
+ * @details
+ * Description:
+ *   Decomposes epoch seconds into calendar date and time components.
  *
  * @param epochSeconds Seconds since 1970-01-01 00:00:00 UTC.
  * @param[out] out Structure to fill.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
  */
 inline void fromEpoch(uint32_t epochSeconds, DateTimeFields& out) {
     uint32_t secondsOfDay = epochSeconds % 86400UL;
@@ -119,10 +143,16 @@ inline void fromEpoch(uint32_t epochSeconds, DateTimeFields& out) {
 
 /**
  * @brief Compute the signed delta (a - b) in seconds between two DateTimeFields.
+ * @details
+ * Description:
+ *   Converts both date-time values to epoch seconds, then returns the signed difference.
  *
  * @param a First date-time.
  * @param b Second date-time.
  * @return Signed difference in seconds (positive if a is later than b).
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
  */
 inline int32_t deltaSeconds(const DateTimeFields& a, const DateTimeFields& b) {
     uint32_t epochA = toEpoch(a);

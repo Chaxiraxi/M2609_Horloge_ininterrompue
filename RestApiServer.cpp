@@ -965,6 +965,20 @@ void RestApiServer::update() {
     client.stop();
 }
 
+/**
+ * @internal
+ * @brief Map source name text to source index.
+ * @details
+ * Normalizes the incoming source name and resolves it to the corresponding internal source slot.
+ *
+ * @param sourceName Source identifier string (e.g. "dab", "ntp", "gps").
+ * @param outIndex Output index written when mapping succeeds.
+ * @return True if the source name is valid and available in configured source count.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool RestApiServer::sourceIndexFromName(const String& sourceName, uint8_t& outIndex) const {
     String normalized = sourceName;
     normalized.toLowerCase();
@@ -985,6 +999,21 @@ bool RestApiServer::sourceIndexFromName(const String& sourceName, uint8_t& outIn
     return false;
 }
 
+/**
+ * @internal
+ * @brief Parse HTTP request line into method and path.
+ * @details
+ * Extracts the HTTP verb and target path from the first request line and strips query parameters.
+ *
+ * @param requestLine Raw first HTTP request line.
+ * @param method Output HTTP method token.
+ * @param path Output normalized path component.
+ * @return True when parsing succeeds and both method/path are non-empty.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool RestApiServer::parseRequestLine(const String& requestLine, String& method, String& path) const {
     int firstSpace = requestLine.indexOf(' ');
     if (firstSpace < 0) return false;
@@ -1000,6 +1029,20 @@ bool RestApiServer::parseRequestLine(const String& requestLine, String& method, 
     return (method.length() > 0 && path.length() > 0);
 }
 
+/**
+ * @internal
+ * @brief Read HTTP request body payload.
+ * @details
+ * Reads up to the announced content length with a short timeout and returns collected data.
+ *
+ * @param client Active WiFi client connection.
+ * @param contentLength Expected payload size from request headers.
+ * @return Body payload as string (possibly partial on timeout).
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 String RestApiServer::readBody(WiFiClient& client, int contentLength) const {
     if (contentLength <= 0) return "";
 
@@ -1016,6 +1059,19 @@ String RestApiServer::readBody(WiFiClient& client, int contentLength) const {
     return body;
 }
 
+/**
+ * @internal
+ * @brief Decode URL-encoded form text.
+ * @details
+ * Converts '+' to spaces and `%HH` hex escapes to their character representation.
+ *
+ * @param input URL-encoded input text.
+ * @return Decoded string.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 String RestApiServer::urlDecode(const String& input) const {
     String decoded;
     decoded.reserve(input.length());
@@ -1036,6 +1092,20 @@ String RestApiServer::urlDecode(const String& input) const {
     return decoded;
 }
 
+/**
+ * @internal
+ * @brief Extract one form parameter from request body.
+ * @details
+ * Finds `key=value` in an x-www-form-urlencoded payload and returns decoded value.
+ *
+ * @param body Request body containing form data.
+ * @param key Parameter key to lookup.
+ * @return Decoded parameter value, or empty string if key is absent.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 String RestApiServer::getParam(const String& body, const String& key) const {
     String search = key + "=";
     int start = body.indexOf(search);
@@ -1048,6 +1118,21 @@ String RestApiServer::getParam(const String& body, const String& key) const {
     return urlDecode(body.substring(start, end));
 }
 
+/**
+ * @internal
+ * @brief Send HTTP response to client.
+ * @details
+ * Writes status line, CORS headers, content type, and optional body to the active client.
+ *
+ * @param client Active WiFi client connection.
+ * @param code HTTP status code.
+ * @param contentType Response content type header value.
+ * @param body Response payload.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void RestApiServer::sendResponse(WiFiClient& client, int code, const String& contentType, const String& body) const {
     String status = "200 OK";
     if (code == 204) {
@@ -1067,6 +1152,18 @@ void RestApiServer::sendResponse(WiFiClient& client, int code, const String& con
     }
 }
 
+/**
+ * @internal
+ * @brief Send current source/time status as JSON.
+ * @details
+ * Builds a compact JSON snapshot with source enabled states and current manual time status.
+ *
+ * @param client Active WiFi client connection.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void RestApiServer::sendStatus(WiFiClient& client) const {
     bool timeSet = false;
     String currentTime = currentTimeIsoString(timeSet);
@@ -1082,10 +1179,37 @@ void RestApiServer::sendStatus(WiFiClient& client) const {
     sendResponse(client, 200, "application/json", json);
 }
 
+/**
+ * @internal
+ * @brief Serve embedded HTML control page.
+ * @details
+ * Sends the precompiled web UI page used for browser-based control of the device.
+ *
+ * @param client Active WiFi client connection.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void RestApiServer::sendWebPage(WiFiClient& client) const {
     sendResponse(client, 200, "text/html", String(kWebPage));
 }
 
+/**
+ * @internal
+ * @brief Handle source enable/disable command.
+ * @details
+ * Parses source and desired state from request body, applies the new source state,
+ * and triggers an immediate coordinator resynchronization.
+ *
+ * @param body URL-encoded request payload.
+ * @param message Output response text.
+ * @return True when handler completes processing.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool RestApiServer::handleToggleSource(const String& body, String& message) {
     String sourceName = getParam(body, "source");
     String value = getParam(body, "value");
@@ -1105,6 +1229,21 @@ bool RestApiServer::handleToggleSource(const String& body, String& message) {
     return true;
 }
 
+/**
+ * @internal
+ * @brief Handle manual time update command.
+ * @details
+ * Parses date/time fields, clamps values to valid ranges, applies them to coordinator,
+ * and returns the resulting formatted time string.
+ *
+ * @param body URL-encoded request payload.
+ * @param message Output response text.
+ * @return True when handler completes processing.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 bool RestApiServer::handleSetTime(const String& body, String& message) {
     int year = getParam(body, "year").toInt();
     int month = getParam(body, "month").toInt();
@@ -1149,6 +1288,20 @@ bool RestApiServer::handleSetTime(const String& body, String& message) {
     return true;
 }
 
+/**
+ * @internal
+ * @brief Build formatted current time string.
+ * @details
+ * Returns a fixed-format timestamp (`YYYY-MM-DD HH:MM:SS`) when manual time is set
+ * and coordinator provides current date-time; otherwise returns a "not defined" marker.
+ *
+ * @param isSet Output flag indicating whether a valid time value is available.
+ * @return Formatted time string or fallback text.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 String RestApiServer::currentTimeIsoString(bool& isSet) const {
     if (!manualTimeSet_) {
         isSet = false;

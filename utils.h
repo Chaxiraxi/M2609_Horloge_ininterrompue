@@ -78,6 +78,9 @@ String formatTwoDigits(uint8_t value);
  * @param day Day in range [1..31].
  * @param month Month in range [1..12].
  * @param year Full year (e.g., 2026).
+ *
+ * @author GOLETTA David
+ * @date 12/02/2026
  */
 void printTimeDateOnScreen(LiquidCrystal* lcd, uint8_t hours, uint8_t minutes, uint8_t seconds, uint8_t day, uint8_t month,
                            uint16_t year);
@@ -91,5 +94,8 @@ void printTimeDateOnScreen(LiquidCrystal* lcd, uint8_t hours, uint8_t minutes, u
  *
  * @param lcd Pointer to the LCD instance.
  * @param text Text to display.
+ *
+ * @author GOLETTA David
+ * @date 12/02/2026
  */
 void displayLongText(LiquidCrystal* lcd, const String& text);

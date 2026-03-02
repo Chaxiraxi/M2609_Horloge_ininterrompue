@@ -28,6 +28,9 @@ class NTPTimeSource : public TimeSource {
      * @param server NTP server hostname (e.g., "pool.ntp.org").
      * @param timezoneOffsetSeconds Timezone offset in seconds (e.g., +3600 for CET).
      * @param notifier Optional notifier for status messages.
+     *
+     * @author GOLETTA David
+     * @date 12/02/2026
      */
     NTPTimeSource(const char* server, int32_t timezoneOffsetSeconds = 0, Notification* notifier = nullptr);
 
@@ -36,6 +39,9 @@ class NTPTimeSource : public TimeSource {
      * @details
      * Description:
      *   Starts the UDP client and prepares NTP updates.
+     *
+     * @author GOLETTA David
+     * @date 12/02/2026
      */
     void init();
 
@@ -47,6 +53,9 @@ class NTPTimeSource : public TimeSource {
      *
      * @param out Reference to a DateTimeFields structure to be filled.
      * @return True if out contains valid NTP-derived values; false otherwise.
+     *
+     * @author GOLETTA David
+     * @date 12/02/2026
      */
     bool getDateTime(DateTimeFields& out) override;
 

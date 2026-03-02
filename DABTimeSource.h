@@ -33,6 +33,7 @@ class DABTimeSource : public TimeSource {
      * @param dabtime Reference to a DABTime structure that will be filled by the library.
      * @param hasService Reference to a flag tracking whether a DAB service is available.
      * @param timezoneOffsetHours Hour offset applied to DAB-provided hour.
+     * @param notifier Optional notifier for status and warning messages.
      *
      * @author GOLETTA David
      * @date 11/02/2026

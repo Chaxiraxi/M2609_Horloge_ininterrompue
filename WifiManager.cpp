@@ -7,6 +7,19 @@
 WiFiManager::WiFiManager(Notification& notification) : notification(notification) {}
 
 namespace {
+/**
+ * @internal
+ * @brief Convert an IPAddress to dotted-decimal text.
+ * @details
+ * Formats the four IP octets into a human-readable IPv4 string.
+ *
+ * @param ip IP address to format.
+ * @return Dotted-decimal representation of the address.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 String ipToString(const IPAddress& ip) {
     return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
 }
@@ -48,6 +61,17 @@ void WiFiManager::connectToWiFi(const char* SSID, const char* PASSWORD) {
     }
 }
 
+/**
+ * @internal
+ * @brief Start fallback access-point mode.
+ * @details
+ * Disconnects station mode and attempts to open a local AP for recovery setup.
+ * Emits status messages describing AP startup success or failure.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void WiFiManager::startFallbackAccessPoint() {
     const char* fallbackSsid = "DabGps-Setup";
 

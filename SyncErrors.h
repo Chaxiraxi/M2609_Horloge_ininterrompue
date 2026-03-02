@@ -42,6 +42,14 @@ struct SyncError {
 
     /**
      * @brief Check if this error is active (non-NONE and not yet acknowledged).
+     * @details
+     * Description:
+     *   Returns true when an error code is set and the entry has not been acknowledged.
+     *
+     * @return True if this error is active; false otherwise.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     bool isActive() const {
         return code != SyncErrorCode::NONE && !acknowledged;
@@ -49,6 +57,12 @@ struct SyncError {
 
     /**
      * @brief Acknowledge (dismiss) this error.
+     * @details
+     * Description:
+     *   Marks the current error as acknowledged so it is no longer considered active.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void acknowledge() {
         acknowledged = true;
@@ -56,6 +70,12 @@ struct SyncError {
 
     /**
      * @brief Clear the error entirely.
+     * @details
+     * Description:
+     *   Resets the code, timestamp, and acknowledgement flag to the default no-error state.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void clear() {
         code = SyncErrorCode::NONE;
@@ -65,7 +85,15 @@ struct SyncError {
 
     /**
      * @brief Raise (or re-raise) an error.
+     * @details
+     * Description:
+     *   Sets the provided error code, updates the creation timestamp, and marks it unacknowledged.
+     *   If the same code is already present, no state change is applied.
+     *
      * @param c Error code.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void raise(SyncErrorCode c) {
         if (code == c) return;  // already raised with same code
@@ -76,6 +104,14 @@ struct SyncError {
 
     /**
      * @brief Get a short human-readable label for the error (fits 16 chars for LCD scroll).
+     * @details
+     * Description:
+     *   Converts the current error code to a compact display label suitable for the LCD.
+     *
+     * @return Pointer to a static C-string label corresponding to the current error code.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     const char* label() const {
         switch (code) {
@@ -121,6 +157,14 @@ struct SyncErrorState {
 
     /**
      * @brief Check if any error is active (not acknowledged).
+     * @details
+     * Description:
+     *   Evaluates global and per-source entries and reports whether at least one active error exists.
+     *
+     * @return True if one or more errors are active; false otherwise.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     bool hasActiveError() const {
         if (globalError.isActive()) return true;
@@ -132,6 +176,14 @@ struct SyncErrorState {
 
     /**
      * @brief Check if ALL errors have been acknowledged (none active).
+     * @details
+     * Description:
+     *   Convenience helper equivalent to the negation of hasActiveError().
+     *
+     * @return True when no active unacknowledged errors remain; false otherwise.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     bool allAcknowledged() const {
         return !hasActiveError();
@@ -139,6 +191,12 @@ struct SyncErrorState {
 
     /**
      * @brief Acknowledge all currently active errors.
+     * @details
+     * Description:
+     *   Marks the global error and all source errors as acknowledged.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void acknowledgeAll() {
         globalError.acknowledge();
@@ -150,7 +208,15 @@ struct SyncErrorState {
     /**
      * @brief Auto-acknowledge errors older than AUTO_ACK_TIMEOUT_MS when
      *        at least one valid source exists.
+     * @details
+     * Description:
+     *   Automatically acknowledges active errors once they exceed the configured timeout,
+     *   but only if at least one source currently provides valid time.
+     *
      * @param hasValidSource True if at least one source currently provides time.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     void autoAcknowledge(bool hasValidSource) {
         if (!hasValidSource) return;
@@ -167,7 +233,14 @@ struct SyncErrorState {
 
     /**
      * @brief Get the first active error to display. Prioritises global, then DAB, NTP, GPS.
+     * @details
+     * Description:
+     *   Returns the highest-priority active error entry for UI rendering.
+     *
      * @return Pointer to the first active SyncError, or nullptr if none.
+     *
+     * @author GOLETTA David
+     * @date 02/03/2026
      */
     const SyncError* firstActive() const {
         if (globalError.isActive()) return &globalError;

@@ -4,8 +4,7 @@
     - Each transport has its own minimum notification level
     - Pluggable transport via NotificationTransport interface
 */
-#ifndef NOTIFICATION_H
-#define NOTIFICATION_H
+#pragma once
 
 #include <Arduino.h>
 
@@ -341,5 +340,3 @@ class Notification {
 
     unsigned long initTime_;
 };
-
-#endif  // NOTIFICATION_H
