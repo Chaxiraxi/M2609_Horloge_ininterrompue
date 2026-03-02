@@ -1,8 +1,8 @@
-#include "DABTimeSource.h"
+#include "DABTimeSource.hpp"
 
 #include <SPI.h>
 
-#include "utils.h"
+#include "../../utils/utils.hpp"
 
 DABTimeSource::DABTimeSource(DAB& dab, DABTime& dabtime, bool& hasService, int8_t timezoneOffsetHours, Notification* notifier)
     : dab_(dab), dabtime_(dabtime), hasService_(hasService), timezoneOffsetHours_(timezoneOffsetHours), notifier_(notifier) {}

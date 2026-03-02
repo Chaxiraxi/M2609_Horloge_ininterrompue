@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Notification.h"
-#include "SyncErrors.h"
-#include "TimeMath.h"
-#include "TimeSource.h"
+#include "../../core/errors/SyncErrors.hpp"
+#include "../../core/logging/Notification.hpp"
+#include "TimeMath.hpp"
+#include "TimeSource.hpp"
 
 /**
  * @file TimeCoordinator.h

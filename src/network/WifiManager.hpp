@@ -2,8 +2,8 @@
 
 #include <Arduino.h>
 
-#include "Notification.h"
-#include "SECRETS.h"
+#include "../config/SECRETS.hpp"
+#include "../core/logging/Notification.hpp"
 
 /**
  * @brief Utility class for managing Wi-Fi connectivity.

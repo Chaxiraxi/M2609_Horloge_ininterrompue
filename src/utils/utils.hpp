@@ -5,7 +5,7 @@
 #include <DABShield.h>
 #include <LiquidCrystalIO.h>
 
-#include "Notification.h"
+#include "../core/logging/Notification.hpp"
 
 /**
  * @brief Print a formatted local date/time from DAB to the serial console.

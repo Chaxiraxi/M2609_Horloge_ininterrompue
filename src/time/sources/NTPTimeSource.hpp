@@ -4,8 +4,8 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-#include "Notification.h"
-#include "TimeSource.h"
+#include "../../core/logging/Notification.hpp"
+#include "../core/TimeSource.hpp"
 
 /**
  * @brief Time source implementation backed by an NTP server.

@@ -3,9 +3,9 @@
 #include <Arduino.h>
 #include <WiFiS3.h>
 
-#include "Notification.h"
-#include "TimeCoordinator.h"
-#include "TimeSource.h"
+#include "../core/logging/Notification.hpp"
+#include "../time/core/TimeCoordinator.hpp"
+#include "../time/core/TimeSource.hpp"
 
 /**
  * @brief Lightweight HTTP REST server for remote clock control.

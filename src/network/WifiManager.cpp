@@ -1,8 +1,8 @@
-#include "WifiManager.h"
+#include "WifiManager.hpp"
 
 #include <WiFiS3.h>
 
-#include "Notification.h"
+#include "../core/logging/Notification.hpp"
 
 WiFiManager::WiFiManager(Notification& notification) : notification(notification) {}
 

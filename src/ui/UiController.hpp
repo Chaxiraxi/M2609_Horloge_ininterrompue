@@ -3,13 +3,13 @@
 #include <IoAbstractionWire.h>
 #include <LiquidCrystalIO.h>
 
-#include "Button.h"
-#include "Notification.h"
-#include "PinDefinitions.h"
-#include "SyncErrors.h"
-#include "TimeCoordinator.h"
-#include "TimeSource.h"
-#include "utils.h"
+#include "../core/errors/SyncErrors.hpp"
+#include "../core/logging/Notification.hpp"
+#include "../platform/PinDefinitions.hpp"
+#include "../time/core/TimeCoordinator.hpp"
+#include "../time/core/TimeSource.hpp"
+#include "../utils/utils.hpp"
+#include "input/Button.hpp"
 
 /**
  * @file UiController.h

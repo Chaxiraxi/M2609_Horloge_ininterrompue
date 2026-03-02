@@ -1,4 +1,4 @@
-PROJECT_NAME           = "DabGps"
+PROJECT_NAME           = "M2609_Horloge_ininterompue"
 OUTPUT_DIRECTORY       = docs
 GENERATE_HTML          = YES
 GENERATE_LATEX         = YES

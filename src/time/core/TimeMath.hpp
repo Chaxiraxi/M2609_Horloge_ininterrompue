@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "TimeSource.h"
+#include "TimeSource.hpp"
 
 /**
  * @file TimeMath.h

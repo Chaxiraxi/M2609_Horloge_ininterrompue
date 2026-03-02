@@ -1,6 +1,6 @@
-#include "RestApiServer.h"
+#include "RestApiServer.hpp"
 
-#include "TimeMath.h"
+#include "../time/core/TimeMath.hpp"
 
 namespace {
 String ipToString(const IPAddress& ip) {
@@ -892,12 +892,15 @@ void RestApiServer::update() {
     WiFiClient client = server_.available();
     if (!client) return;
 
+    if (notifier_) notifier_->debug("Incoming request detected");
+
     const unsigned long timeoutAt = millis() + 3000;
     while (!client.available() && millis() < timeoutAt) {
         delay(1);
     }
 
     if (!client.available()) {
+        if (notifier_) notifier_->debug("No data available, closing connection");
         client.stop();
         return;
     }
@@ -908,10 +911,13 @@ void RestApiServer::update() {
     String method;
     String path;
     if (!parseRequestLine(requestLine, method, path)) {
+        if (notifier_) notifier_->debug("Failed to parse request line");
         sendResponse(client, 200, "text/plain", "Arduino UNO R4 WiFi - Server active.");
         client.stop();
         return;
     }
+
+    if (notifier_) notifier_->debug("Request: " + method + " " + path);
 
     int contentLength = 0;
     while (true) {
@@ -926,41 +932,49 @@ void RestApiServer::update() {
     }
 
     if (method == "OPTIONS") {
+        if (notifier_) notifier_->debug("Responding to OPTIONS request");
         sendResponse(client, 204, "text/plain", "");
         client.stop();
         return;
     }
 
     if (method == "GET" && path == "/") {
+        if (notifier_) notifier_->debug("Sending web page");
         sendWebPage(client);
         client.stop();
         return;
     }
 
     if (method == "GET" && path == "/status") {
+        if (notifier_) notifier_->debug("Sending status");
         sendStatus(client);
         client.stop();
         return;
     }
 
     if (method == "POST" && path == "/toggle-source") {
+        if (notifier_) notifier_->debug("Processing toggle-source request");
         String body = readBody(client, contentLength);
         String message;
         handleToggleSource(body, message);
+        if (notifier_) notifier_->debug("Toggle-source response: " + message);
         sendResponse(client, 200, "text/plain", message);
         client.stop();
         return;
     }
 
     if (method == "POST" && path == "/set-time") {
+        if (notifier_) notifier_->debug("Processing set-time request");
         String body = readBody(client, contentLength);
         String message;
         handleSetTime(body, message);
+        if (notifier_) notifier_->debug("Set-time response: " + message);
         sendResponse(client, 200, "text/plain", message);
         client.stop();
         return;
     }
 
+    if (notifier_) notifier_->debug("Unknown request, sending default response");
     sendResponse(client, 200, "text/plain", "Arduino UNO R4 WiFi - Server active.");
     client.stop();
 }

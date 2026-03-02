@@ -1,4 +1,4 @@
-#include "NTPTimeSource.h"
+#include "NTPTimeSource.hpp"
 
 #if defined(ARDUINO_UNOR4_WIFI)
 #include <WiFiS3.h>

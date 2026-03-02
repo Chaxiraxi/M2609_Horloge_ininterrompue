@@ -1,8 +1,8 @@
-#include "UiController.h"
+#include "UiController.hpp"
 
 #include <cstring>
 
-#include "TimeMath.h"
+#include "../time/core/TimeMath.hpp"
 
 // =========================================================================
 // Construction / init

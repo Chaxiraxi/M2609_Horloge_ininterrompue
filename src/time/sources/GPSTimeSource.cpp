@@ -1,4 +1,4 @@
-#include "GPSTimeSource.h"
+#include "GPSTimeSource.hpp"
 
 GPSTimeSource::GPSTimeSource(Adafruit_GPS& gps, int8_t timezoneOffsetHours)
     : gps_(gps), timezoneOffsetHours_(timezoneOffsetHours) {}

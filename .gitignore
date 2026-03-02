@@ -3,4 +3,4 @@
 *.pdf
 sketch.yaml
 docs/
-SECRETS.h
+src/config/SECRETS.hpp

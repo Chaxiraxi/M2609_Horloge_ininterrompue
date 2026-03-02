@@ -2,7 +2,7 @@
 
 #include <Adafruit_GPS.h>
 
-#include "TimeSource.h"
+#include "../core/TimeSource.hpp"
 
 /**
  * @brief Time source implementation backed by an Adafruit GPS receiver.
