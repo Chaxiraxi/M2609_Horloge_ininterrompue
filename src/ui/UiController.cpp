@@ -1,5 +1,7 @@
 #include "UiController.hpp"
 
+#include <string.h>
+
 #include <cstring>
 
 #include "../time/core/TimeMath.hpp"
@@ -51,6 +53,51 @@ void UiController::update() {
         case Mode::ManualConfig:
             handleManualConfig();
             break;
+    }
+}
+
+/**
+ * @internal
+ * @brief Invalidate cached LCD line content.
+ * @details
+ * Forces the next render pass to refresh both LCD rows regardless of previously cached values.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
+void UiController::invalidateLcdCache() {
+    lcdCacheValid_ = false;
+}
+
+/**
+ * @internal
+ * @brief Write one LCD row only when content changed.
+ * @details
+ * Normalizes text to 8 characters, compares against cached row content, and writes to the LCD
+ * only on actual content changes to reduce I2C traffic.
+ *
+ * @param row LCD row index (0 or 1).
+ * @param text Raw text to render.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
+void UiController::writeLcdIfChanged(uint8_t row, const String& text) {
+    String normalized = text;
+    if (normalized.length() < 8) {
+        while (normalized.length() < 8) normalized += ' ';
+    } else if (normalized.length() > 8) {
+        normalized = normalized.substring(0, 8);
+    }
+
+    String* lastLine = (row == 0) ? &lastLcdLine0_ : &lastLcdLine1_;
+    if (!lcdCacheValid_ || *lastLine != normalized) {
+        lcd_.setCursor(0, row);
+        lcd_.print(normalized);
+        *lastLine = normalized;
+        lcdCacheValid_ = true;
     }
 }
 
@@ -237,12 +284,12 @@ void UiController::handleDisplayDateTime() {
         manualFieldIdx_ = 0;
         // Pre-fill with current time (or zeros)
         if (!coordinator_.getCurrentDateTime(manualDt_)) {
-            memset(&manualDt_, 0, sizeof(manualDt_));
+            ::memset(&manualDt_, 0, sizeof(manualDt_));
             manualDt_.date.year = 2026;
             manualDt_.date.month = 1;
             manualDt_.date.day = 1;
         }
-        lcd_.clear();
+        invalidateLcdCache();
         return;
     }
 
@@ -251,7 +298,7 @@ void UiController::handleDisplayDateTime() {
         if (logger_) logger_->debug("Entering source selection mode");
         mode_ = Mode::SourceSelection;
         selectedSourceIdx_ = 0;
-        lcd_.clear();
+        invalidateLcdCache();
         return;
     }
 
@@ -282,7 +329,7 @@ void UiController::handleErrorPresent() {
     // If no more active errors, return to display
     if (!coordinator_.errors().hasActiveError()) {
         mode_ = Mode::DisplayDateTime;
-        lcd_.clear();
+        invalidateLcdCache();
         return;
     }
 
@@ -317,7 +364,7 @@ void UiController::handleSourceSelection() {
     // CFG pressed again → exit source selection
     if (cfgReleased()) {
         mode_ = Mode::DisplayDateTime;
-        lcd_.clear();
+        invalidateLcdCache();
         if (logger_) logger_->debug("Exiting source selection mode");
         return;
     }
@@ -360,7 +407,7 @@ void UiController::handleManualConfig() {
     // Long press SET (3 s) → exit without saving
     if (setLongPressed()) {
         mode_ = Mode::DisplayDateTime;
-        lcd_.clear();
+        invalidateLcdCache();
         return;
     }
 
@@ -373,7 +420,7 @@ void UiController::handleManualConfig() {
         }
         coordinator_.setManualDateTime(manualDt_);
         mode_ = Mode::DisplayDateTime;
-        lcd_.clear();
+        invalidateLcdCache();
         exit_debounced = false;  // reset debounce for next entry
         return;
     }
@@ -472,13 +519,10 @@ void UiController::renderError(const SyncError* err) {
     lastRenderMs_ = millis();
 
     if (!err) return;
-    lcd_.setCursor(0, 0);
-    lcd_.print("Err:    ");
-    lcd_.setCursor(0, 1);
+    writeLcdIfChanged(0, "Err:");
     // Print label, pad to 8 chars
     String lbl = err->label();
-    while (lbl.length() < 8) lbl += ' ';
-    lcd_.print(lbl.substring(0, 8));
+    writeLcdIfChanged(1, lbl);
 }
 
 /**
@@ -495,18 +539,15 @@ void UiController::renderSourceSelection() {
     if (millis() - lastRenderMs_ < RENDER_INTERVAL_MS) return;
     lastRenderMs_ = millis();
 
-    lcd_.setCursor(0, 0);
-    lcd_.print("Src sel:");
+    writeLcdIfChanged(0, "Src sel:");
 
-    lcd_.setCursor(0, 1);
     if (selectedSourceIdx_ < sourceCount_ && sources_[selectedSourceIdx_]) {
         bool on = sources_[selectedSourceIdx_]->isEnabled();
         String line = String(sourceName(selectedSourceIdx_));
         line += on ? " ON " : " OFF";
-        while (line.length() < 8) line += ' ';
-        lcd_.print(line.substring(0, 8));
+        writeLcdIfChanged(1, line);
     } else {
-        lcd_.print("        ");
+        writeLcdIfChanged(1, "");
     }
 }
 
@@ -525,14 +566,11 @@ void UiController::renderManualConfig() {
     lastRenderMs_ = millis();
 
     // Line 1: field name
-    lcd_.setCursor(0, 0);
     const char* fieldNames[] = {"Hour", "Minute", "Second", "DOW", "Day", "Month", "Year"};
     String header = fieldNames[manualFieldIdx_];
-    while (header.length() < 8) header += ' ';
-    lcd_.print(header.substring(0, 8));
+    writeLcdIfChanged(0, header);
 
     // Line 2: current value (with blinking cursor effect via modular time)
-    lcd_.setCursor(0, 1);
     String val;
     switch (static_cast<ManualField>(manualFieldIdx_)) {
         case FIELD_HOUR:
@@ -557,8 +595,7 @@ void UiController::renderManualConfig() {
             val = "--";
             break;
     }
-    while (val.length() < 8) val += ' ';
-    lcd_.print(val.substring(0, 8));
+    writeLcdIfChanged(1, val);
 }
 
 // =========================================================================

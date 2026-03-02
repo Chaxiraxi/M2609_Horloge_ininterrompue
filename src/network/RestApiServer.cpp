@@ -894,19 +894,35 @@ void RestApiServer::update() {
 
     if (notifier_) notifier_->debug("Incoming request detected");
 
-    const unsigned long timeoutAt = millis() + 3000;
-    while (!client.available() && millis() < timeoutAt) {
-        delay(1);
-    }
+    auto readLineNonBlocking = [&](String& outLine) -> bool {
+        outLine = "";
+        while (client.available()) {
+            char ch = static_cast<char>(client.read());
+            if (ch == '\r') continue;
+            if (ch == '\n') {
+                outLine.trim();
+                return true;
+            }
+            if (outLine.length() >= 192) {
+                return false;
+            }
+            outLine += ch;
+        }
+        return false;
+    };
 
     if (!client.available()) {
-        if (notifier_) notifier_->debug("No data available, closing connection");
+        if (notifier_) notifier_->debug("No data available yet, closing connection (non-blocking)");
         client.stop();
         return;
     }
 
-    String requestLine = client.readStringUntil('\n');
-    requestLine.trim();
+    String requestLine;
+    if (!readLineNonBlocking(requestLine)) {
+        if (notifier_) notifier_->debug("Incomplete request line, closing connection");
+        client.stop();
+        return;
+    }
 
     String method;
     String path;
@@ -920,15 +936,37 @@ void RestApiServer::update() {
     if (notifier_) notifier_->debug("Request: " + method + " " + path);
 
     int contentLength = 0;
-    while (true) {
-        String headerLine = client.readStringUntil('\n');
-        headerLine.trim();
+    bool reachedHeaderEnd = false;
+    for (uint8_t headerCount = 0; headerCount < 24; ++headerCount) {
+        String headerLine;
+        if (!readLineNonBlocking(headerLine)) {
+            if (notifier_) notifier_->debug("Incomplete headers, closing connection");
+            client.stop();
+            return;
+        }
+
         if (headerLine.startsWith("Content-Length:")) {
             contentLength = headerLine.substring(15).toInt();
+            if (contentLength < 0) contentLength = 0;
+            if (contentLength > 512) {
+                if (notifier_) notifier_->warning("Content-Length too large, rejecting request");
+                sendResponse(client, 413, "text/plain", "Payload Too Large");
+                client.stop();
+                return;
+            }
         }
+
         if (headerLine.length() == 0) {
+            reachedHeaderEnd = true;
             break;
         }
+    }
+
+    if (!reachedHeaderEnd) {
+        if (notifier_) notifier_->warning("Header section too large, closing connection");
+        sendResponse(client, 400, "text/plain", "Bad Request");
+        client.stop();
+        return;
     }
 
     if (method == "OPTIONS") {
@@ -1067,14 +1105,12 @@ bool RestApiServer::parseRequestLine(const String& requestLine, String& method, 
 String RestApiServer::readBody(WiFiClient& client, int contentLength) const {
     if (contentLength <= 0) return "";
 
+    const int safeLength = min(contentLength, 512);
     String body;
-    body.reserve(contentLength);
-    const unsigned long timeoutAt = millis() + 2000;
+    body.reserve(safeLength);
 
-    while (static_cast<int>(body.length()) < contentLength && millis() < timeoutAt) {
-        if (client.available()) {
-            body += static_cast<char>(client.read());
-        }
+    while (static_cast<int>(body.length()) < safeLength && client.available()) {
+        body += static_cast<char>(client.read());
     }
 
     return body;
@@ -1158,10 +1194,30 @@ void RestApiServer::sendResponse(WiFiClient& client, int code, const String& con
     sendResponse(client, code, contentType, body.c_str());
 }
 
+/**
+ * @internal
+ * @brief Send HTTP response to client using C-string payload.
+ * @details
+ * Writes status line, CORS headers, content type, and optional body to the active client.
+ * Supports common status codes used by this API.
+ *
+ * @param client Active WiFi client connection.
+ * @param code HTTP status code.
+ * @param contentType Response content type header value.
+ * @param body Response payload as null-terminated C-string.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ * @endinternal
+ */
 void RestApiServer::sendResponse(WiFiClient& client, int code, const String& contentType, const char* body) const {
     String status = "200 OK";
     if (code == 204) {
         status = "204 No Content";
+    } else if (code == 400) {
+        status = "400 Bad Request";
+    } else if (code == 413) {
+        status = "413 Payload Too Large";
     } else if (code == 404) {
         status = "404 Not Found";
     }

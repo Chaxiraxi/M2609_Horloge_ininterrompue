@@ -61,6 +61,15 @@ UiController ui = UiController(lcd, setButton, coordinator, timeSources, TIME_SO
 
 #define DEBUG_MODE true
 
+/**
+ * @brief Initialize hardware, services, and application modules.
+ * @details
+ * Configures serial logging, resets the MCP23017, initializes I2C/LCD/peripherals,
+ * connects Wi-Fi, initializes time sources, and starts coordinator/UI/REST services.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ */
 void setup() {
     // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
     // also spit it out
@@ -74,6 +83,7 @@ void setup() {
     digitalWrite(RESET_PIN_23017, HIGH);
 
     Wire.begin();
+    Wire.setClock(I2C_CLOCK_HZ);
     lcd.begin(8, 2);
     analogWriteResolution(12);
     analogWrite(SCREEN_CONTRAST_PIN, 600);
@@ -90,6 +100,15 @@ void setup() {
     restApiServer.begin();
 }
 
+/**
+ * @brief Main non-blocking runtime loop.
+ * @details
+ * Drains GPS UART input quickly, parses completed NMEA frames, updates time coordination,
+ * refreshes UI state machine, and serves REST requests.
+ *
+ * @author GOLETTA David
+ * @date 02/03/2026
+ */
 void loop() {
     // Drain GPS bytes as fast as possible. Reading only one byte per loop
     // iteration can fall behind when the loop does slower work (LCD/I2C).

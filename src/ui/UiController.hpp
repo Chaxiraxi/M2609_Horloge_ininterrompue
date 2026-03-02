@@ -118,6 +118,8 @@ class UiController {
     void renderError(const SyncError* err);
     void renderSourceSelection();
     void renderManualConfig();
+    void writeLcdIfChanged(uint8_t row, const String& text);
+    void invalidateLcdCache();
 
     // --- Source name helper -----------------------------------------------
     const char* sourceName(uint8_t index) const;
@@ -170,4 +172,7 @@ class UiController {
     // LCD refresh throttle
     uint32_t lastRenderMs_ = 0;
     static constexpr uint16_t RENDER_INTERVAL_MS = 100;
+    String lastLcdLine0_ = "";
+    String lastLcdLine1_ = "";
+    bool lcdCacheValid_ = false;
 };

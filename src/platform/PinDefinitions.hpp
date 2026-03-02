@@ -3,6 +3,10 @@
 #define RESET_PIN_23017 5
 #define SCREEN_CONTRAST_PIN A0
 
+// --- I2C bus clock (Hz) ---
+// Change this value to tune I2C speed globally.
+#define I2C_CLOCK_HZ 100000UL
+
 // --- MCP23017 pin numbers (accent on the I/O expander, address 0x20) ---
 // LCD data lines (directly addressed via ioFrom23017)
 #define LCD_RS 8

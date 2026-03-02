@@ -111,6 +111,11 @@ Do not introduce alternate architecture patterns unless explicitly requested.
 - If behavior changes, update relevant docs in the same change set.
 - Use concise, technical English.
 - Do not claim features that are not implemented.
+- Every function and method must have a Doxygen docstring.
+- Required tags for every function/method docstring: `@brief`, `@details`, `@date`, `@author`.
+- If parameters exist, include one `@param` per parameter.
+- If a return value exists, include an `@return` tag.
+- Private/internal helper methods must be wrapped with `@internal` and `@endinternal`.
 
 ---
 
