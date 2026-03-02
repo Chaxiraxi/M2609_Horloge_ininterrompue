@@ -12,6 +12,7 @@
 #include "NTPTimeSource.h"
 #include "Notification.h"
 #include "PinDefinitions.h"
+#include "RestApiServer.h"
 #include "TimeCoordinator.h"
 #include "TimeSource.h"
 #include "UiController.h"
@@ -47,6 +48,7 @@ TimeSource* timeSources[] = {&dabTimeSource, &ntpTimeSource, &gpsTimeSource};
 constexpr uint8_t TIME_SOURCE_COUNT = sizeof(timeSources) / sizeof(timeSources[0]);
 
 TimeCoordinator coordinator(&Logger);
+RestApiServer restApiServer(coordinator, timeSources, TIME_SOURCE_COUNT, &Logger);
 UiController ui(lcd, setButton, coordinator, timeSources, TIME_SOURCE_COUNT, mcpIo, &Logger);
 
 #define DEBUG_MODE true
@@ -77,6 +79,7 @@ void setup() {
 
     coordinator.setSources(timeSources, TIME_SOURCE_COUNT);
     ui.begin();
+    restApiServer.begin();
 }
 
 void loop() {
@@ -99,6 +102,9 @@ void loop() {
 
     // Run the UI controller (reads buttons/encoder, manages modes, refreshes LCD).
     ui.update();
+
+    // Serve REST API + embedded web page.
+    restApiServer.update();
 }
 
 // Hardware SPI
