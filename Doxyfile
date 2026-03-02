@@ -1,4 +1,4 @@
-PROJECT_NAME           = "M2609_Horloge_ininterompue"
+PROJECT_NAME           = "M2609_Horloge_ininterrompue"
 OUTPUT_DIRECTORY       = docs
 GENERATE_HTML          = YES
 GENERATE_LATEX         = YES
@@ -6,11 +6,14 @@ USE_PDFLATEX           = YES
 USE_HYPERLINKS         = YES
 INPUT                  = "C:/Users/david/Documents/CPNV/Module 4 électronique/Arduino/DabGps"
 RECURSIVE              = YES
-FILE_PATTERNS          = *.h *.hpp *.c *.cpp *.ino
+FILE_PATTERNS          = *.h *.hpp *.c *.cpp *.ino *.md
+MARKDOWN_SUPPORT       = YES
 EXTENSION_MAPPING      = ino=C++
-EXTRACT_ALL            = YES
+EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = YES
 EXTRACT_STATIC         = YES
 QUIET                  = NO
 WARNINGS               = YES
-USE_MDFILE_AS_MAINPAGE =
+USE_MDFILE_AS_MAINPAGE = README.md
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
