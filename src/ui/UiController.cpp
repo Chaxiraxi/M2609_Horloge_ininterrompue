@@ -26,11 +26,15 @@ void UiController::begin() {
     ioDevicePinMode(mcpIo_, MCP_CFG_BTN, INPUT);
     ioDevicePinMode(mcpIo_, MCP_ENC_A, INPUT);
     ioDevicePinMode(mcpIo_, MCP_ENC_B, INPUT);
+    ioDevicePinMode(mcpIo_, LED_GPS, OUTPUT);
+    ioDevicePinMode(mcpIo_, LED_DAB, OUTPUT);
+    ioDevicePinMode(mcpIo_, LED_NTP, OUTPUT);
     ioDeviceSync(mcpIo_);
 
     // Initialise encoder last state
     encLastState_ = (ioDeviceDigitalRead(mcpIo_, MCP_ENC_A) << 1) |
                     ioDeviceDigitalRead(mcpIo_, MCP_ENC_B);
+    refreshSourceLeds();
 }
 
 // =========================================================================
@@ -39,6 +43,7 @@ void UiController::begin() {
 
 void UiController::update() {
     readInputs();
+    refreshSourceLeds();
 
     switch (mode_) {
         case Mode::DisplayDateTime:
@@ -145,7 +150,7 @@ void UiController::readInputs() {
     cfgLast_ = cfgNow;
 
     // --- Encoder (Gray-code on MCP23017) ---
-    constexpr unsigned long ENCODER_DEBOUNCE_MS = 20UL;
+    constexpr unsigned long ENCODER_DEBOUNCE_MS = 200UL;
     static unsigned long lastEncTimestamp = 0;
 
     uint8_t a = ioDeviceDigitalRead(mcpIo_, MCP_ENC_A);
@@ -390,6 +395,7 @@ void UiController::handleSourceSelection() {
         bool enabled = sources_[selectedSourceIdx_]->isEnabled();
         sources_[selectedSourceIdx_]->setEnabled(!enabled);
         if (logger_) logger_->debug("Toggled source " + String(selectedSourceIdx_) + " to " + (enabled ? "disabled" : "enabled"));
+        refreshSourceLeds();
     }
 
     renderSourceSelection();
@@ -608,6 +614,71 @@ void UiController::renderManualConfig() {
 // =========================================================================
 // Helpers
 // =========================================================================
+
+/**
+ * @internal
+ * @brief Synchronize MCP LEDs with the per-source enabled state.
+ * @details
+ * Iterates over every configured source slot, resolves the MCP pin associated with the
+ * source, and updates the LED output when the desired state differs from the cached value.
+ * The cache is initialized on the first pass to guarantee a deterministic starting state.
+ *
+ * @author GOLETTA David
+ * @date 04/03/2026
+ * @endinternal
+ */
+void UiController::refreshSourceLeds() {
+    constexpr uint8_t INVALID_LED_PIN = 0xFF;
+    for (uint8_t idx = 0; idx < TimeCoordinator::MAX_SOURCES; ++idx) {
+        uint8_t pin = ledPinForSource(idx);
+        if (pin == INVALID_LED_PIN) {
+            continue;
+        }
+
+        bool shouldBeOn = false;
+        if (idx < sourceCount_ && sources_[idx]) {
+            shouldBeOn = sources_[idx]->isEnabled();
+        }
+
+        if (ledCacheInitialized_ && ledStateCache_[idx] == shouldBeOn) {
+            continue;
+        }
+
+        ioDeviceDigitalWrite(mcpIo_, pin, shouldBeOn ? HIGH : LOW);
+        ledStateCache_[idx] = shouldBeOn;
+    }
+
+    if (!ledCacheInitialized_) {
+        ledCacheInitialized_ = true;
+    }
+}
+
+/**
+ * @internal
+ * @brief Resolve a source index to the MCP LED pin that represents it.
+ * @details
+ * Provides the MCP23017 pin number for the LED associated with the requested source slot.
+ * Returns 0xFF for unsupported indexes so callers can ignore the LED update.
+ *
+ * @param index Source slot index (0 = highest priority).
+ * @return MCP pin number or 0xFF when the slot does not exist.
+ *
+ * @author GOLETTA David
+ * @date 04/03/2026
+ * @endinternal
+ */
+uint8_t UiController::ledPinForSource(uint8_t index) const {
+    switch (index) {
+        case 0:
+            return LED_DAB;
+        case 1:
+            return LED_NTP;
+        case 2:
+            return LED_GPS;
+        default:
+            return 0xFF;
+    }
+}
 
 /**
  * @internal

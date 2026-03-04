@@ -120,6 +120,8 @@ class UiController {
     void renderManualConfig();
     void writeLcdIfChanged(uint8_t row, const String& text);
     void invalidateLcdCache();
+    void refreshSourceLeds();
+    uint8_t ledPinForSource(uint8_t index) const;
 
     // --- Source name helper -----------------------------------------------
     const char* sourceName(uint8_t index) const;
@@ -154,6 +156,8 @@ class UiController {
 
     // Source selection mode state
     uint8_t selectedSourceIdx_ = 0;
+    bool ledStateCache_[TimeCoordinator::MAX_SOURCES] = {};
+    bool ledCacheInitialized_ = false;
 
     // Manual config mode state
     enum ManualField : uint8_t {

@@ -42,7 +42,7 @@ constexpr int8_t TIMEZONE_OFFSET_HOURS = 1;
 const byte dabSpiSelectPin = 8;
 
 Notification Logger;
-SerialTransport serialTransport = SerialTransport(115200);
+SerialTransport serialTransport = SerialTransport();
 WebpageTransport webpageTransport;
 WiFiManager wifiManager = WiFiManager(Logger);
 IoAbstractionRef mcpIo = ioFrom23017(0x20);
@@ -74,8 +74,6 @@ UiController ui = UiController(lcd, setButton, coordinator, timeSources, TIME_SO
  * @date 02/03/2026
  */
 void setup() {
-    // connect at 115200 so we can read the GPS fast enough and echo without dropping chars
-    // also spit it out
     serialTransport.init();
     Logger.addTransport(&serialTransport, DEBUG_MODE ? Notification::DEBUG : Notification::INFO);
     Logger.addTransport(&webpageTransport, Notification::DEBUG);
