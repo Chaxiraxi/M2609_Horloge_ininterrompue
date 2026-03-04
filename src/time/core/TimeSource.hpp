@@ -185,6 +185,38 @@ class TimeSource {
         return true;
     }
 
+    /**
+     * @brief Set source timezone offset in minutes.
+     * @details
+     * Description:
+     *   Optional API for sources that support timezone conversion (e.g. GPS, NTP).
+     *   Default implementation is a no-op.
+     *
+     * @param offsetMinutes Signed offset in minutes from UTC.
+     *
+     * @author GOLETTA David
+     * @date 04/03/2026
+     */
+    virtual void setTimezoneOffsetMinutes(int16_t offsetMinutes) {
+        (void)offsetMinutes;
+    }
+
+    /**
+     * @brief Get source timezone offset in minutes.
+     * @details
+     * Description:
+     *   Optional API for sources that support timezone conversion.
+     *   Default implementation returns 0 (UTC).
+     *
+     * @return Signed offset in minutes from UTC.
+     *
+     * @author GOLETTA David
+     * @date 04/03/2026
+     */
+    virtual int16_t getTimezoneOffsetMinutes() const {
+        return 0;
+    }
+
    protected:
     /**
      * @brief Enabled/disabled state of this source.

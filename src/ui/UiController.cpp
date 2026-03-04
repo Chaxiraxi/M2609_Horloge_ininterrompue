@@ -145,11 +145,18 @@ void UiController::readInputs() {
     cfgLast_ = cfgNow;
 
     // --- Encoder (Gray-code on MCP23017) ---
+    constexpr unsigned long ENCODER_DEBOUNCE_MS = 20UL;
+    static unsigned long lastEncTimestamp = 0;
+
     uint8_t a = ioDeviceDigitalRead(mcpIo_, MCP_ENC_A);
     uint8_t b = ioDeviceDigitalRead(mcpIo_, MCP_ENC_B);
     uint8_t encState = (a << 1) | b;
     encDelta_ = 0;
-    if (encState != encLastState_) {
+
+    unsigned long now = millis();
+    if ((lastEncTimestamp == 0UL || now - lastEncTimestamp >= ENCODER_DEBOUNCE_MS) &&
+        encState != encLastState_) {
+        lastEncTimestamp = now;
         // Simple quadrature decode (half-step)
         // Direction table for Gray code transitions:
         //  00->01 = +1, 00->10 = -1

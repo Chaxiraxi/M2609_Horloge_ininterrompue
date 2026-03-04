@@ -49,10 +49,11 @@ uint8_t daysInMonth(uint16_t year, uint8_t month) {
 }  // namespace
 
 NTPTimeSource::NTPTimeSource(const char* server, int32_t timezoneOffsetSeconds, Notification* notifier)
-    : timeClient_(udp_, server, timezoneOffsetSeconds), notifier_(notifier) {}
+    : timeClient_(udp_, server, timezoneOffsetSeconds), timezoneOffsetSeconds_(timezoneOffsetSeconds), notifier_(notifier) {}
 
 void NTPTimeSource::init() {
     timeClient_.begin();
+    timeClient_.setTimeOffset(timezoneOffsetSeconds_);
     if (notifier_) {
         notifier_->info("NTP client started");
     }
@@ -136,4 +137,13 @@ bool NTPTimeSource::getDateTime(DateTimeFields& out) {
     }
 
     return epochToDateTime(epochSeconds, out);
+}
+
+void NTPTimeSource::setTimezoneOffsetMinutes(int16_t offsetMinutes) {
+    timezoneOffsetSeconds_ = static_cast<int32_t>(offsetMinutes) * 60;
+    timeClient_.setTimeOffset(timezoneOffsetSeconds_);
+}
+
+int16_t NTPTimeSource::getTimezoneOffsetMinutes() const {
+    return static_cast<int16_t>(timezoneOffsetSeconds_ / 60);
 }

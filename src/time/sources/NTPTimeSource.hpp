@@ -59,11 +59,38 @@ class NTPTimeSource : public TimeSource {
      */
     bool getDateTime(DateTimeFields& out) override;
 
+    /**
+     * @brief Update timezone offset used by the NTP client.
+     * @details
+     * Description:
+     *   Stores and applies a new signed offset in minutes from UTC.
+     *
+     * @param offsetMinutes Signed offset in minutes from UTC.
+     *
+     * @author GOLETTA David
+     * @date 04/03/2026
+     */
+    void setTimezoneOffsetMinutes(int16_t offsetMinutes) override;
+
+    /**
+     * @brief Read current timezone offset used by the NTP client.
+     * @details
+     * Description:
+     *   Returns the currently configured signed offset in minutes.
+     *
+     * @return Signed offset in minutes from UTC.
+     *
+     * @author GOLETTA David
+     * @date 04/03/2026
+     */
+    int16_t getTimezoneOffsetMinutes() const override;
+
    private:
     bool isWiFiConnected() const;
     bool epochToDateTime(uint32_t epochSeconds, DateTimeFields& out) const;
 
     WiFiUDP udp_;
     NTPClient timeClient_;
+    int32_t timezoneOffsetSeconds_;
     Notification* notifier_;
 };

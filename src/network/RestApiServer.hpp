@@ -77,13 +77,13 @@ class RestApiServer {
 
     bool handleToggleSource(const String& body, String& message);
     bool handleSetTime(const String& body, String& message);
+    bool handleSetTimezone(const String& body, String& message);
 
     String currentTimeIsoString(bool& isSet) const;
 
     TimeCoordinator& coordinator_;
     TimeSource* sources_[TimeCoordinator::MAX_SOURCES] = {};
     uint8_t sourceCount_ = 0;
-    bool manualTimeSet_ = false;
     Notification* notifier_ = nullptr;
     WiFiServer server_;
 };

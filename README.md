@@ -81,6 +81,7 @@ The embedded server (default port `80`) serves:
 - `GET /status` → JSON status (source states + time set state)
 - `POST /toggle-source` → enable/disable one source
 - `POST /set-time` → set manual date/time
+- `POST /set-timezone` → set timezone offset (applied to NTP and GPS sources)
 
 The web UI allows source toggling and manual time setting from a browser on the same network.
 

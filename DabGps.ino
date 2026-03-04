@@ -48,7 +48,7 @@ Button setButton = Button(SET_BTN);
 LiquidCrystal lcd = LiquidCrystal(LCD_RS, LCD_EN, LCD_D4, LCD_D5, LCD_D6, LCD_D7, mcpIo);
 
 DABTimeSource dabTimeSource = DABTimeSource(Dab, dabtime, hasService, 0, &Logger);
-GPSTimeSource gpsTimeSource = GPSTimeSource(GPS, TIMEZONE_OFFSET_HOURS);
+GPSTimeSource gpsTimeSource = GPSTimeSource(GPS, TIMEZONE_OFFSET_HOURS * 60);
 NTPTimeSource ntpTimeSource = NTPTimeSource("pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, &Logger);
 
 // Sources array in priority order: DAB > NTP > GPS

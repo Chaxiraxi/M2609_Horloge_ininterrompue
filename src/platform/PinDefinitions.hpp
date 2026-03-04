@@ -15,6 +15,9 @@
 #define LCD_D5 11
 #define LCD_D6 12
 #define LCD_D7 13
+#define LED_GPS 3
+#define LED_DAB 4
+#define LED_NTP 5
 
 // Encoder + CFG button (MCP23017 port A, accent pins 1-3)
 #define MCP_ENC_A 0    ///< Encoder channel A

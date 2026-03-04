@@ -81,8 +81,9 @@ Le serveur embarqué (port par défaut `80`) expose :
 - `GET /status` → statut JSON (état sources + état horloge manuelle)
 - `POST /toggle-source` → active/désactive une source
 - `POST /set-time` → définit la date/heure manuellement
+- `POST /set-timezone` → définit le décalage horaire (appliqué aux sources NTP et GPS)
 
-L’interface web permet d’activer/désactiver les sources et de régler l’heure depuis un navigateur sur le même réseau.
+L’interface web permet d’activer/désactiver les sources, de régler l’heure et le fuseau horaire depuis un navigateur sur le même réseau.
 
 ## Compilation et upload
 

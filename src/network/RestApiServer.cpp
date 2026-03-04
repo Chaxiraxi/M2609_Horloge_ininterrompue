@@ -329,7 +329,8 @@ const char kWebPage[] = R"HTML(
         .row-info input[type="text"]:focus {
           border-color: var(--accent);
         }
-        #sendBtn {
+        #sendBtn,
+        #timezoneBtn {
           padding: 11px 22px;
           border-radius: 10px;
           border: none;
@@ -341,10 +342,11 @@ const char kWebPage[] = R"HTML(
           transition: background .2s, transform .1s;
           align-self: flex-start;
         }
-        #sendBtn:hover { background: var(--accent-h); }
-        #sendBtn:active { transform: scale(.97); }
+        #sendBtn:hover, #timezoneBtn:hover { background: var(--accent-h); }
+        #sendBtn:active, #timezoneBtn:active { transform: scale(.97); }
 
-        #sentResult {
+        #sentResult,
+        #timezoneResult {
           font-size: .88rem;
           color: var(--accent);
           font-weight: 600;
@@ -436,6 +438,7 @@ const char kWebPage[] = R"HTML(
             <div class="row">
               <div class="row-info">
                 <div class="label">Sélectionnez un fuseau</div>
+                <div class="sub">NTP et GPS seront ajustés selon ce fuseau</div>
                 <select id="timezoneSelect" style="margin-top:8px; width:100%; padding:10px 13px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
                   <option value="-720">UTC -12:00</option>
                   <option value="-660">UTC -11:00</option>
@@ -463,6 +466,8 @@ const char kWebPage[] = R"HTML(
                   <option value="660">UTC +11:00</option>
                   <option value="720">UTC +12:00</option>
                 </select>
+                <button id="timezoneBtn" style="margin-top:12px;" onclick="sendTimezone()">Envoyer le fuseau à l'Arduino</button>
+                <div id="timezoneResult" style="margin-top:8px;"></div>
               </div>
             </div>
           </div>
@@ -525,13 +530,33 @@ const char kWebPage[] = R"HTML(
           // ================================================================
           let BASE = "";
           let isConnected = false;
+          let timezoneSelectionDirty = false;
+
+          function refreshBaseUrl() {
+            const ipInput = document.getElementById("arduinoIpInput");
+            const typedIp = ipInput ? ipInput.value.trim() : "";
+            if (typedIp) {
+              BASE = `http://${typedIp}`;
+              localStorage.setItem("arduinoIp", typedIp);
+              return BASE;
+            }
+
+            const savedIp = localStorage.getItem("arduinoIp") || "";
+            if (savedIp) {
+              BASE = `http://${savedIp}`;
+              return BASE;
+            }
+
+            BASE = "";
+            return "";
+          }
 
           // Load IP from localStorage on init
           (function() {
             const savedIp = localStorage.getItem("arduinoIp") || "";
             if (savedIp) {
               document.getElementById("arduinoIpInput").value = savedIp;
-              BASE = `http://${savedIp}`;
+              refreshBaseUrl();
             } else {
               setTimeout(openIpModal, 0);
             }
@@ -541,8 +566,7 @@ const char kWebPage[] = R"HTML(
           document.getElementById("arduinoIpInput").addEventListener("change", (e) => {
             const ip = e.target.value.trim();
             if (ip) {
-              BASE = `http://${ip}`;
-              localStorage.setItem("arduinoIp", ip);
+              refreshBaseUrl();
               pollStatus(); // tester la connexion immédiatement
             }
           });
@@ -644,8 +668,13 @@ const char kWebPage[] = R"HTML(
 
           async function sendSource(src, wrap, want) {
             const val = want ? "1" : "0";
+            const baseUrl = refreshBaseUrl();
+            if (!baseUrl) {
+              wrap.classList.toggle("on", state[src]);
+              return;
+            }
             try {
-              await fetch(BASE + "/toggle-source", {
+              await fetch(baseUrl + "/toggle-source", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `source=${src}&value=${val}`
@@ -674,8 +703,13 @@ const char kWebPage[] = R"HTML(
 
             const resultEl = document.getElementById("sentResult");
             resultEl.textContent = "Envoi en cours…";
+            const baseUrl = refreshBaseUrl();
+            if (!baseUrl) {
+              resultEl.textContent = "✗ IP Arduino manquante.";
+              return;
+            }
             try {
-              const res = await fetch(BASE + "/set-time", {
+              const res = await fetch(baseUrl + "/set-time", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body
@@ -763,6 +797,7 @@ const char kWebPage[] = R"HTML(
             if (saved) sel.value = saved;
             sel.addEventListener('change', (e) => {
               localStorage.setItem('timezoneOffset', e.target.value);
+              timezoneSelectionDirty = true;
             });
           }
 
@@ -771,6 +806,37 @@ const char kWebPage[] = R"HTML(
             if (saved) return parseInt(saved, 10);
             const sel = document.getElementById('timezoneSelect');
             return sel ? parseInt(sel.value, 10) : 0;
+          }
+
+          async function sendTimezoneOffsetMinutes(offsetMinutes) {
+            const baseUrl = refreshBaseUrl();
+            if (!baseUrl) return false;
+            const res = await fetch(baseUrl + "/set-timezone", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: `offsetMinutes=${offsetMinutes}`
+            });
+            return res.ok;
+          }
+
+          async function sendTimezone() {
+            const resultEl = document.getElementById("timezoneResult");
+            const offsetMinutes = getSelectedTimezoneOffsetMinutes();
+            resultEl.textContent = "Envoi en cours…";
+
+            try {
+              const ok = await sendTimezoneOffsetMinutes(offsetMinutes);
+              if (!ok) {
+                resultEl.textContent = "✗ Erreur lors de l'envoi du fuseau.";
+                return;
+              }
+              localStorage.setItem('timezoneOffset', String(offsetMinutes));
+              timezoneSelectionDirty = false;
+              resultEl.textContent = "✓ Fuseau envoyé à l'Arduino.";
+            } catch (e) {
+              console.warn("Timezone update failed:", e);
+              resultEl.textContent = "✗ Erreur de connexion.";
+            }
           }
 
           // ================================================================
@@ -816,8 +882,16 @@ const char kWebPage[] = R"HTML(
           async function pollStatus() {
             const badge = document.getElementById("connBadge");
             const label = document.getElementById("connLabel");
+            const baseUrl = refreshBaseUrl();
+            if (!baseUrl) {
+              isConnected = false;
+              badge.className = "disconnected";
+              badge.disabled = false;
+              label.textContent = "Déconnecté";
+              return;
+            }
             try {
-              const res = await fetch(BASE + "/status", { signal: AbortSignal.timeout(2000) });
+              const res = await fetch(baseUrl + "/status", { signal: AbortSignal.timeout(2000) });
               const data = await res.json();
 
               isConnected = true;
@@ -834,6 +908,15 @@ const char kWebPage[] = R"HTML(
               document.getElementById("dabToggle").classList.toggle("on", data.dab);
               document.getElementById("ntpToggle").classList.toggle("on", data.ntp);
               document.getElementById("gpsToggle").classList.toggle("on", data.gps);
+
+              if (!timezoneSelectionDirty && typeof data.timezoneOffsetMinutes === "number") {
+                const timezoneValue = String(data.timezoneOffsetMinutes);
+                const timezoneSelect = document.getElementById("timezoneSelect");
+                if (timezoneSelect) {
+                  timezoneSelect.value = timezoneValue;
+                }
+                localStorage.setItem("timezoneOffset", timezoneValue);
+              }
 
               updateFormState();
 
@@ -1007,6 +1090,17 @@ void RestApiServer::update() {
         String message;
         handleSetTime(body, message);
         if (notifier_) notifier_->debug("Set-time response: " + message);
+        sendResponse(client, 200, "text/plain", message);
+        client.stop();
+        return;
+    }
+
+    if (method == "POST" && path == "/set-timezone") {
+        if (notifier_) notifier_->debug("Processing set-timezone request");
+        String body = readBody(client, contentLength);
+        String message;
+        handleSetTimezone(body, message);
+        if (notifier_) notifier_->debug("Set-timezone response: " + message);
         sendResponse(client, 200, "text/plain", message);
         client.stop();
         return;
@@ -1239,7 +1333,7 @@ void RestApiServer::sendResponse(WiFiClient& client, int code, const String& con
  * @internal
  * @brief Send current source/time status as JSON.
  * @details
- * Builds a compact JSON snapshot with source enabled states and current manual time status.
+ * Builds a compact JSON snapshot with source enabled states and current time availability.
  *
  * @param client Active WiFi client connection.
  *
@@ -1250,11 +1344,18 @@ void RestApiServer::sendResponse(WiFiClient& client, int code, const String& con
 void RestApiServer::sendStatus(WiFiClient& client) const {
     bool timeSet = false;
     String currentTime = currentTimeIsoString(timeSet);
+    int16_t timezoneOffsetMinutes = 0;
+    if (sourceCount_ > 1 && sources_[1]) {
+        timezoneOffsetMinutes = sources_[1]->getTimezoneOffsetMinutes();
+    } else if (sourceCount_ > 2 && sources_[2]) {
+        timezoneOffsetMinutes = sources_[2]->getTimezoneOffsetMinutes();
+    }
 
     String json = "{";
     json += "\"dab\":" + String((sourceCount_ > 0 && sources_[0] && sources_[0]->isEnabled()) ? "true" : "false") + ",";
     json += "\"ntp\":" + String((sourceCount_ > 1 && sources_[1] && sources_[1]->isEnabled()) ? "true" : "false") + ",";
     json += "\"gps\":" + String((sourceCount_ > 2 && sources_[2] && sources_[2]->isEnabled()) ? "true" : "false") + ",";
+    json += "\"timezoneOffsetMinutes\":" + String(timezoneOffsetMinutes) + ",";
     json += "\"timeSet\":" + String(timeSet ? "true" : "false") + ",";
     json += "\"time\":\"" + currentTime + "\"";
     json += "}";
@@ -1314,6 +1415,43 @@ bool RestApiServer::handleToggleSource(const String& body, String& message) {
 
 /**
  * @internal
+ * @brief Handle timezone offset update command.
+ * @details
+ * Parses timezone offset in minutes and applies it to NTP and GPS sources.
+ * DAB source is intentionally unaffected.
+ *
+ * @param body URL-encoded request payload.
+ * @param message Output response text.
+ * @return True when handler completes processing.
+ *
+ * @author GOLETTA David
+ * @date 04/03/2026
+ * @endinternal
+ */
+bool RestApiServer::handleSetTimezone(const String& body, String& message) {
+    int offsetMinutes = getParam(body, "offsetMinutes").toInt();
+    if (offsetMinutes < -720) offsetMinutes = -720;
+    if (offsetMinutes > 840) offsetMinutes = 840;
+
+    if (sourceCount_ > 1 && sources_[1]) {
+        sources_[1]->setTimezoneOffsetMinutes(static_cast<int16_t>(offsetMinutes));
+    }
+    if (sourceCount_ > 2 && sources_[2]) {
+        sources_[2]->setTimezoneOffsetMinutes(static_cast<int16_t>(offsetMinutes));
+    }
+
+    coordinator_.forceSync();
+
+    if (notifier_) {
+        notifier_->info("REST timezone updated to " + String(offsetMinutes) + " minutes");
+    }
+
+    message = "OK";
+    return true;
+}
+
+/**
+ * @internal
  * @brief Handle manual time update command.
  * @details
  * Parses date/time fields, clamps values to valid ranges, applies them to coordinator,
@@ -1358,7 +1496,6 @@ bool RestApiServer::handleSetTime(const String& body, String& message) {
     dt.time.second = static_cast<uint8_t>(second);
 
     coordinator_.setManualDateTime(dt);
-    manualTimeSet_ = true;
 
     if (notifier_) {
         bool hasTime = false;
@@ -1375,8 +1512,8 @@ bool RestApiServer::handleSetTime(const String& body, String& message) {
  * @internal
  * @brief Build formatted current time string.
  * @details
- * Returns a fixed-format timestamp (`YYYY-MM-DD HH:MM:SS`) when manual time is set
- * and coordinator provides current date-time; otherwise returns a "not defined" marker.
+ * Returns a fixed-format timestamp (`YYYY-MM-DD HH:MM:SS`) when coordinator provides
+ * current date-time; otherwise returns a "not defined" marker.
  *
  * @param isSet Output flag indicating whether a valid time value is available.
  * @return Formatted time string or fallback text.
@@ -1386,11 +1523,6 @@ bool RestApiServer::handleSetTime(const String& body, String& message) {
  * @endinternal
  */
 String RestApiServer::currentTimeIsoString(bool& isSet) const {
-    if (!manualTimeSet_) {
-        isSet = false;
-        return "Non definie";
-    }
-
     DateTimeFields dt{};
     if (!coordinator_.getCurrentDateTime(dt)) {
         isSet = false;

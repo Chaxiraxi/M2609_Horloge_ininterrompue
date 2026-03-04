@@ -3,6 +3,7 @@
 #include <WiFiS3.h>
 
 #include "../core/logging/Notification.hpp"
+#include "../platform/PinDefinitions.hpp"
 
 WiFiManager::WiFiManager(Notification& notification) : notification(notification) {}
 
@@ -44,6 +45,13 @@ void WiFiManager::connectToWiFi(const char* SSID, const char* PASSWORD) {
             attempts++;
             notification.debug("Attempting to connect to WiFi... (" + String(attempts) + "/" + String(maxAttempts) + ")");
             lastLogTime = now;
+
+            // If we press SET button, skip straight to fallback AP mode
+            if (WiFi.status() != WL_CONNECTED && digitalRead(SET_BTN)) {
+                notification.info("WiFi connection attempt interrupted by user. Starting fallback AP.");
+                startFallbackAccessPoint();
+                return;
+            }
         }
         yield();
     }

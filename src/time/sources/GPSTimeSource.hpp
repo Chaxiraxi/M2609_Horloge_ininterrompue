@@ -9,7 +9,7 @@
  * @details
  * Description:
  *   Provides date/time values obtained from the Adafruit_GPS library (NMEA parsing done elsewhere).
- *   Applies a fixed timezone offset to the hour field (hour wrapping only).
+ *   Applies a timezone offset in minutes and adjusts both date and time.
  *
  * @par Inputs
  *   Requires a reference to an already-constructed Adafruit_GPS instance.
@@ -29,12 +29,12 @@ class GPSTimeSource : public TimeSource {
      *   Stores references and configuration needed to read time/date from the provided GPS object.
      *
      * @param gps Reference to an Adafruit_GPS instance.
-     * @param timezoneOffsetHours Hour offset applied to GPS-provided hour (e.g., +1 for CET).
+     * @param timezoneOffsetMinutes Offset applied to GPS UTC time in minutes (e.g., +60 for CET).
      *
      * @author GOLETTA David
      * @date 11/02/2026
      */
-    GPSTimeSource(Adafruit_GPS& gps, int8_t timezoneOffsetHours);
+    GPSTimeSource(Adafruit_GPS& gps, int16_t timezoneOffsetMinutes = 0);
 
     /**
      * @brief Initialize the GPS module configuration.
@@ -63,6 +63,32 @@ class GPSTimeSource : public TimeSource {
      */
     bool getDateTime(DateTimeFields& out) override;
 
+    /**
+     * @brief Update timezone offset for GPS-derived time.
+     * @details
+     * Description:
+     *   Sets the signed offset in minutes that is applied to GPS UTC timestamps.
+     *
+     * @param offsetMinutes Signed offset in minutes from UTC.
+     *
+     * @author GOLETTA David
+     * @date 04/03/2026
+     */
+    void setTimezoneOffsetMinutes(int16_t offsetMinutes) override;
+
+    /**
+     * @brief Read current timezone offset for this source.
+     * @details
+     * Description:
+     *   Returns the signed offset in minutes currently used for conversion.
+     *
+     * @return Signed offset in minutes from UTC.
+     *
+     * @author GOLETTA David
+     * @date 04/03/2026
+     */
+    int16_t getTimezoneOffsetMinutes() const override;
+
    private:
     /**
      * @brief Validate the GPS date/time fields.
@@ -78,5 +104,5 @@ class GPSTimeSource : public TimeSource {
     bool isSaneDateTime() const;
 
     Adafruit_GPS& gps_;
-    int8_t timezoneOffsetHours_;
+    int16_t timezoneOffsetMinutes_;
 };

@@ -1,7 +1,9 @@
 #include "GPSTimeSource.hpp"
 
-GPSTimeSource::GPSTimeSource(Adafruit_GPS& gps, int8_t timezoneOffsetHours)
-    : gps_(gps), timezoneOffsetHours_(timezoneOffsetHours) {}
+#include "../core/TimeMath.hpp"
+
+GPSTimeSource::GPSTimeSource(Adafruit_GPS& gps, int16_t timezoneOffsetMinutes)
+    : gps_(gps), timezoneOffsetMinutes_(timezoneOffsetMinutes) {}
 
 void GPSTimeSource::init() {
     // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
@@ -42,9 +44,25 @@ bool GPSTimeSource::getDateTime(DateTimeFields& out) {
     out.date.month = gps_.month;
     out.date.day = gps_.day;
 
-    out.time.hour = wrapHours(static_cast<int32_t>(gps_.hour) + timezoneOffsetHours_);
+    out.time.hour = gps_.hour;
     out.time.minute = gps_.minute;
     out.time.second = gps_.seconds;
 
+    const uint32_t epochUtc = TimeMath::toEpoch(out);
+    if (epochUtc == 0) return false;
+
+    const int32_t adjustedEpoch = static_cast<int32_t>(epochUtc) + (static_cast<int32_t>(timezoneOffsetMinutes_) * 60);
+    if (adjustedEpoch < 0) return false;
+
+    TimeMath::fromEpoch(static_cast<uint32_t>(adjustedEpoch), out);
+
     return true;
+}
+
+void GPSTimeSource::setTimezoneOffsetMinutes(int16_t offsetMinutes) {
+    timezoneOffsetMinutes_ = offsetMinutes;
+}
+
+int16_t GPSTimeSource::getTimezoneOffsetMinutes() const {
+    return timezoneOffsetMinutes_;
 }
