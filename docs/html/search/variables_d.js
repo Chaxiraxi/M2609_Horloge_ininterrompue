@@ -1,0 +1,20 @@
+var searchData=
+[
+  ['second_0',['second',['../struct_time_fields.html#a945a057c78328a0c32f2c78d75ddcb7c',1,'TimeFields']]],
+  ['selectedsourceidx_5f_1',['selectedSourceIdx_',['../class_ui_controller.html#ae2a248f8a6bf6b8db7b06d455b60c0f6',1,'UiController']]],
+  ['serialtransport_2',['serialTransport',['../_dab_gps_8ino.html#ace2f06197453330d4f17a2d707ba30fd',1,'DabGps.ino']]],
+  ['server_5f_3',['server_',['../class_rest_api_server.html#a5517a073d0f964f3b445b415a256c3e4',1,'RestApiServer']]],
+  ['setbutton_4',['setButton',['../_dab_gps_8ino.html#a25a60a1baa289afec095e7a5b2a9d4ca',1,'DabGps.ino']]],
+  ['setbutton_5f_5',['setButton_',['../class_ui_controller.html#a986f97072032c763b836a4c01b8f6683',1,'UiController']]],
+  ['setheld_5f_6',['setHeld_',['../class_ui_controller.html#a13d1b358f633c91db76fd8cf6bd545dc',1,'UiController']]],
+  ['setpressstartms_5f_7',['setPressStartMs_',['../class_ui_controller.html#a673ad2476019c654218610264b1b27b1',1,'UiController']]],
+  ['source_5fcount_8',['SOURCE_COUNT',['../struct_sync_error_state.html#a79e8b1acc7796006ab4f01505e3231b9',1,'SyncErrorState']]],
+  ['sourcecoherent_5f_9',['sourceCoherent_',['../class_time_coordinator.html#a504b78acfd41e0ec1775cbe09d9f2b3f',1,'TimeCoordinator']]],
+  ['sourcecount_5f_10',['sourceCount_',['../class_rest_api_server.html#a715d6883beebc1c621238d4484839663',1,'RestApiServer::sourceCount_'],['../class_time_coordinator.html#afb9313c28dc0b8e30059ef41efd68cb7',1,'TimeCoordinator::sourceCount_'],['../class_ui_controller.html#a9ba3a00b31a1dd49358b172944aff7f4',1,'UiController::sourceCount_']]],
+  ['sourcedatetime_5f_11',['sourceDateTime_',['../class_time_coordinator.html#a534fc124666acdf6e0ec25c8078bcf18',1,'TimeCoordinator']]],
+  ['sourceepoch_5f_12',['sourceEpoch_',['../class_time_coordinator.html#a35b859894d9a524dd07845f278ddf7a9',1,'TimeCoordinator']]],
+  ['sourceerrors_13',['sourceErrors',['../struct_sync_error_state.html#a046158ff193f416d9c2bf2dde96bf947',1,'SyncErrorState']]],
+  ['sources_5f_14',['sources_',['../class_rest_api_server.html#ae2f33a3ff1a9ba303433a61ee9b17e38',1,'RestApiServer::sources_'],['../class_time_coordinator.html#ae35244ad87a203db35d855e72c0cca6c',1,'TimeCoordinator::sources_'],['../class_ui_controller.html#a593c0a2e99546e59e8b0cc47bbb8b287',1,'UiController::sources_']]],
+  ['sourcevalid_5f_15',['sourceValid_',['../class_time_coordinator.html#aff453c308a5744462f2e9fb493e6a23c',1,'TimeCoordinator']]],
+  ['sync_5finterval_5fms_16',['SYNC_INTERVAL_MS',['../class_time_coordinator.html#ad582a3bbe38534585e9ba7b1d7b712f9',1,'TimeCoordinator']]]
+];

@@ -2,5 +2,5 @@
 .vscode/
 *.pdf
 sketch.yaml
-docs/
+docs/latex/
 src/config/SECRETS.hpp
