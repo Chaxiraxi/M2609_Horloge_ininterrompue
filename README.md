@@ -79,11 +79,17 @@ The embedded server (default port `80`) serves:
 
 - `GET /` → embedded web UI
 - `GET /status` → JSON status (source states + time set state)
+- `GET /logs` → latest 20 in-memory logs (newest first)
 - `POST /toggle-source` → enable/disable one source
 - `POST /set-time` → set manual date/time
 - `POST /set-timezone` → set timezone offset (applied to NTP and GPS sources)
 
 The web UI allows source toggling and manual time setting from a browser on the same network.
+It also includes a logs panel with:
+
+- level threshold filter (`DEBUG`, `INFO`, `WARNING`, `ERROR`) with default `INFO`,
+- configurable logs polling interval in seconds (minimum `1` second),
+- display format: `timestamp + level + message`.
 
 ## Build and upload
 

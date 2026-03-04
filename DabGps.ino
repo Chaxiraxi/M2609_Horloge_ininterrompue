@@ -15,6 +15,8 @@
 #include <Wire.h>
 
 #include "src/core/logging/Notification.hpp"
+#include "src/core/logging/SerialTransport.hpp"
+#include "src/core/logging/WebpageTransport.hpp"
 #include "src/network/RestApiServer.hpp"
 #include "src/network/WifiManager.hpp"
 #include "src/platform/PinDefinitions.hpp"
@@ -41,6 +43,7 @@ const byte dabSpiSelectPin = 8;
 
 Notification Logger;
 SerialTransport serialTransport = SerialTransport(115200);
+WebpageTransport webpageTransport;
 WiFiManager wifiManager = WiFiManager(Logger);
 IoAbstractionRef mcpIo = ioFrom23017(0x20);
 
@@ -56,7 +59,7 @@ TimeSource* timeSources[] = {&dabTimeSource, &ntpTimeSource, &gpsTimeSource};
 constexpr uint8_t TIME_SOURCE_COUNT = sizeof(timeSources) / sizeof(timeSources[0]);
 
 TimeCoordinator coordinator = TimeCoordinator(&Logger);
-RestApiServer restApiServer = RestApiServer(coordinator, timeSources, TIME_SOURCE_COUNT, &Logger);
+RestApiServer restApiServer = RestApiServer(coordinator, timeSources, TIME_SOURCE_COUNT, &Logger, 80, &webpageTransport);
 UiController ui = UiController(lcd, setButton, coordinator, timeSources, TIME_SOURCE_COUNT, mcpIo, &Logger);
 
 #define DEBUG_MODE true
@@ -75,6 +78,7 @@ void setup() {
     // also spit it out
     serialTransport.init();
     Logger.addTransport(&serialTransport, DEBUG_MODE ? Notification::DEBUG : Notification::INFO);
+    Logger.addTransport(&webpageTransport, Notification::DEBUG);
 
     // Reset the MCP23017 I/O expander to ensure it's in a known state (it can get into a bad state if power is removed while it's writing to its registers)
     pinMode(RESET_PIN_23017, OUTPUT);

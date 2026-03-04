@@ -4,6 +4,7 @@
 #include <WiFiS3.h>
 
 #include "../core/logging/Notification.hpp"
+#include "../core/logging/WebpageTransport.hpp"
 #include "../time/core/TimeCoordinator.hpp"
 #include "../time/core/TimeSource.hpp"
 
@@ -30,6 +31,7 @@ class RestApiServer {
      * @param sourceCount Number of entries in the sources array.
      * @param notifier Optional notifier used for request/status logging.
      * @param port TCP port used by the embedded HTTP server.
+     * @param webpageTransport Optional in-memory log transport used by `/logs` endpoint.
      *
      * @author GOLETTA David
      * @date 02/03/2026
@@ -37,7 +39,8 @@ class RestApiServer {
     RestApiServer(TimeCoordinator& coordinator,
                   TimeSource* sources[], uint8_t sourceCount,
                   Notification* notifier = nullptr,
-                  uint16_t port = 80);
+                  uint16_t port = 80,
+                  WebpageTransport* webpageTransport = nullptr);
 
     /**
      * @brief Start the embedded HTTP server.
@@ -73,6 +76,7 @@ class RestApiServer {
     void sendResponse(WiFiClient& client, int code, const String& contentType, const String& body) const;
     void sendResponse(WiFiClient& client, int code, const String& contentType, const char* body) const;
     void sendStatus(WiFiClient& client) const;
+    void sendLogs(WiFiClient& client) const;
     void sendWebPage(WiFiClient& client) const;
 
     bool handleToggleSource(const String& body, String& message);
@@ -85,5 +89,6 @@ class RestApiServer {
     TimeSource* sources_[TimeCoordinator::MAX_SOURCES] = {};
     uint8_t sourceCount_ = 0;
     Notification* notifier_ = nullptr;
+    WebpageTransport* webpageTransport_ = nullptr;
     WiFiServer server_;
 };

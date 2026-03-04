@@ -7,6 +7,43 @@ String ipToString(const IPAddress& ip) {
     return String(ip[0]) + "." + String(ip[1]) + "." + String(ip[2]) + "." + String(ip[3]);
 }
 
+/**
+ * @internal
+ * @brief Append a JSON-escaped C-string to a String buffer.
+ * @details
+ * Escapes quotes, backslashes, and control characters to keep generated JSON valid.
+ * Any control code below ASCII 0x20 is replaced by a space character.
+ *
+ * @param text Input null-terminated C string.
+ * @param out Destination JSON string being assembled.
+ *
+ * @author GOLETTA David
+ * @date 04/03/2026
+ * @endinternal
+ */
+void appendJsonEscaped(const char* text, String& out) {
+    if (!text) return;
+
+    for (size_t i = 0; text[i] != '\0'; ++i) {
+        const unsigned char c = static_cast<unsigned char>(text[i]);
+        if (c == '"') {
+            out += "\\\"";
+        } else if (c == '\\') {
+            out += "\\\\";
+        } else if (c == '\n') {
+            out += "\\n";
+        } else if (c == '\r') {
+            out += "\\r";
+        } else if (c == '\t') {
+            out += "\\t";
+        } else if (c < 0x20) {
+            out += ' ';
+        } else {
+            out += static_cast<char>(c);
+        }
+    }
+}
+
 const char kWebPage[] = R"HTML(
 <!DOCTYPE html>
 <html lang="fr">
@@ -353,6 +390,60 @@ const char kWebPage[] = R"HTML(
           min-height: 1.3em;
         }
 
+        .logs-controls {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .logs-controls .field {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 150px;
+        }
+        .logs-controls label {
+          font-size: .78rem;
+          color: var(--subtext);
+        }
+        .logs-controls select,
+        .logs-controls input {
+          padding: 8px 10px;
+          border-radius: 9px;
+          border: 1px solid var(--border);
+          background: var(--bg);
+          color: var(--text);
+          font-size: .85rem;
+        }
+        #logsStatus {
+          font-size: .8rem;
+          color: var(--subtext);
+          margin-bottom: 8px;
+        }
+        #logsList {
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          background: var(--bg);
+          max-height: 220px;
+          overflow-y: auto;
+          padding: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .log-line {
+          font-size: .78rem;
+          line-height: 1.35;
+          word-break: break-word;
+        }
+        .log-level {
+          font-weight: 700;
+        }
+        .log-level.DEBUG { color: var(--subtext); }
+        .log-level.INFO { color: var(--accent); }
+        .log-level.WARNING { color: var(--accent-h); }
+        .log-level.ERROR { color: var(--red); }
+
         footer {
           text-align: center;
           padding: 16px;
@@ -486,6 +577,27 @@ const char kWebPage[] = R"HTML(
             </div>
           </div>
 
+          <div class="card" id="logsCard">
+            <div class="card-title">Logs</div>
+            <div class="logs-controls">
+              <div class="field">
+                <label for="logLevelSelect">Level filter</label>
+                <select id="logLevelSelect">
+                  <option value="DEBUG">DEBUG</option>
+                  <option value="INFO" selected>INFO</option>
+                  <option value="WARNING">WARNING</option>
+                  <option value="ERROR">ERROR</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="logPollSeconds">Poll every (s)</label>
+                <input type="number" id="logPollSeconds" min="1" step="1" value="2"/>
+              </div>
+            </div>
+            <div id="logsStatus">No logs fetched yet.</div>
+            <div id="logsList"></div>
+          </div>
+
         </main>
 
         <footer><a href="mailto:david.goletta@eduvaud.ch,ambroise.degramont@eduvaud.ch">Nous contacter</a></footer>
@@ -499,9 +611,17 @@ const char kWebPage[] = R"HTML(
             ntp: false,
             gps: false,
             timeSet: false,
+            logs: [],
             // référence locale pour faire tourner l'horloge entre les polls
             localBaseEpoch: null,    // Date.now() quand on a reçu l'heure
             arduinoBaseEpoch: null,  // epoch correspondant à l'heure Arduino reçue
+          };
+
+          const LEVEL_RANK = {
+            DEBUG: 0,
+            INFO: 1,
+            WARNING: 2,
+            ERROR: 3,
           };
 
           // ================================================================
@@ -531,6 +651,7 @@ const char kWebPage[] = R"HTML(
           let BASE = "";
           let isConnected = false;
           let timezoneSelectionDirty = false;
+          let logsPollTimer = null;
 
           function refreshBaseUrl() {
             const ipInput = document.getElementById("arduinoIpInput");
@@ -840,6 +961,134 @@ const char kWebPage[] = R"HTML(
           }
 
           // ================================================================
+          // LOGS VIEW
+          // ================================================================
+          function shouldDisplayLevel(level, minLevel) {
+            const safeLevel = (level || "INFO").toUpperCase();
+            const safeMinLevel = (minLevel || "INFO").toUpperCase();
+            const levelRank = LEVEL_RANK[safeLevel] ?? LEVEL_RANK.INFO;
+            const minRank = LEVEL_RANK[safeMinLevel] ?? LEVEL_RANK.INFO;
+            return levelRank >= minRank;
+          }
+
+          function formatLogTimestamp(timestampMs) {
+            const totalMs = Math.max(0, Number(timestampMs) || 0);
+            const milliseconds = totalMs % 1000;
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const seconds = totalSeconds % 60;
+            const totalMinutes = Math.floor(totalSeconds / 60);
+            const minutes = totalMinutes % 60;
+            const hours = Math.floor(totalMinutes / 60);
+
+            const hh = String(hours).padStart(2, "0");
+            const mm = String(minutes).padStart(2, "0");
+            const ss = String(seconds).padStart(2, "0");
+            const mmm = String(milliseconds).padStart(3, "0");
+            return `${hh}:${mm}:${ss}.${mmm}`;
+          }
+
+          function renderLogs() {
+            const listEl = document.getElementById("logsList");
+            const statusEl = document.getElementById("logsStatus");
+            const levelSelect = document.getElementById("logLevelSelect");
+            const selectedLevel = (levelSelect?.value || "INFO").toUpperCase();
+            const filteredLogs = state.logs.filter((entry) => shouldDisplayLevel(entry.level, selectedLevel));
+
+            listEl.innerHTML = "";
+            if (filteredLogs.length === 0) {
+              const empty = document.createElement("div");
+              empty.className = "log-line";
+              empty.textContent = "No log for current filter.";
+              listEl.appendChild(empty);
+              statusEl.textContent = `Showing 0 / ${state.logs.length} log(s) (${selectedLevel}+).`;
+              return;
+            }
+
+            filteredLogs.forEach((entry) => {
+              const line = document.createElement("div");
+              line.className = "log-line";
+
+              const level = (entry.level || "INFO").toUpperCase();
+              const levelSpan = document.createElement("span");
+              levelSpan.className = `log-level ${level}`;
+              levelSpan.textContent = `[${level}]`;
+
+              const timeText = formatLogTimestamp(entry.timestampMs);
+              const messageText = entry.message || "";
+              const textNode = document.createTextNode(` ${timeText} ${messageText}`);
+
+              line.appendChild(levelSpan);
+              line.appendChild(textNode);
+              listEl.appendChild(line);
+            });
+
+            statusEl.textContent = `Showing ${filteredLogs.length} / ${state.logs.length} log(s) (${selectedLevel}+).`;
+          }
+
+          async function pollLogs() {
+            const statusEl = document.getElementById("logsStatus");
+            const baseUrl = refreshBaseUrl();
+            if (!baseUrl) {
+              statusEl.textContent = "Missing Arduino IP.";
+              state.logs = [];
+              renderLogs();
+              return;
+            }
+
+            try {
+              const res = await fetch(baseUrl + "/logs", { signal: AbortSignal.timeout(2000) });
+              const data = await res.json();
+              state.logs = Array.isArray(data.entries) ? data.entries : [];
+              renderLogs();
+            } catch (e) {
+              statusEl.textContent = "Log fetch failed: " + e;
+            }
+          }
+
+          function startLogsPolling() {
+            const input = document.getElementById("logPollSeconds");
+            let seconds = parseInt(input?.value || "2", 10);
+            if (!Number.isFinite(seconds) || seconds < 1) {
+              seconds = 1;
+            }
+            input.value = String(seconds);
+            localStorage.setItem("logPollSeconds", String(seconds));
+
+            if (logsPollTimer !== null) {
+              clearInterval(logsPollTimer);
+            }
+
+            pollLogs();
+            logsPollTimer = setInterval(pollLogs, seconds * 1000);
+          }
+
+          function initLogsControls() {
+            const levelSelect = document.getElementById("logLevelSelect");
+            const pollInput = document.getElementById("logPollSeconds");
+
+            const savedLevel = (localStorage.getItem("logLevelFilter") || "INFO").toUpperCase();
+            if (LEVEL_RANK[savedLevel] !== undefined) {
+              levelSelect.value = savedLevel;
+            } else {
+              levelSelect.value = "INFO";
+            }
+
+            const savedPoll = parseInt(localStorage.getItem("logPollSeconds") || "2", 10);
+            pollInput.value = String(Number.isFinite(savedPoll) && savedPoll >= 1 ? savedPoll : 2);
+
+            levelSelect.addEventListener("change", () => {
+              localStorage.setItem("logLevelFilter", levelSelect.value);
+              renderLogs();
+            });
+
+            pollInput.addEventListener("change", () => {
+              startLogsPolling();
+            });
+
+            startLogsPolling();
+          }
+
+          // ================================================================
           // ANALOG CLOCK (canvas)
           // ================================================================
           let _analog = { ctx: null, size: 0, scale: 1 };
@@ -939,6 +1188,7 @@ const char kWebPage[] = R"HTML(
           document.querySelectorAll(".toggle-wrap").forEach(buildToggle);
           setDefaultDatetime();
           initTimezoneSelect();
+          initLogsControls();
           initAnalog();
           updateFormState();
 
@@ -955,8 +1205,13 @@ const char kWebPage[] = R"HTML(
 )HTML";
 }  // namespace
 
-RestApiServer::RestApiServer(TimeCoordinator& coordinator, TimeSource* sources[], uint8_t sourceCount, Notification* notifier, uint16_t port)
-    : coordinator_(coordinator), notifier_(notifier), server_(port) {
+RestApiServer::RestApiServer(TimeCoordinator& coordinator,
+                             TimeSource* sources[],
+                             uint8_t sourceCount,
+                             Notification* notifier,
+                             uint16_t port,
+                             WebpageTransport* webpageTransport)
+    : coordinator_(coordinator), notifier_(notifier), webpageTransport_(webpageTransport), server_(port) {
     sourceCount_ = min(sourceCount, TimeCoordinator::MAX_SOURCES);
     for (uint8_t i = 0; i < sourceCount_; ++i) {
         sources_[i] = sources[i];
@@ -975,7 +1230,7 @@ void RestApiServer::update() {
     WiFiClient client = server_.available();
     if (!client) return;
 
-    if (notifier_) notifier_->debug("Incoming request detected");
+    // if (notifier_) notifier_->debug("Incoming request detected");
 
     auto readLineNonBlocking = [&](String& outLine) -> bool {
         outLine = "";
@@ -1060,15 +1315,22 @@ void RestApiServer::update() {
     }
 
     if (method == "GET" && path == "/") {
-        if (notifier_) notifier_->debug("Sending web page");
+        // if (notifier_) notifier_->debug("Sending web page");
         sendWebPage(client);
         client.stop();
         return;
     }
 
     if (method == "GET" && path == "/status") {
-        if (notifier_) notifier_->debug("Sending status");
+        // if (notifier_) notifier_->debug("Sending status");
         sendStatus(client);
+        client.stop();
+        return;
+    }
+
+    if (method == "GET" && path == "/logs") {
+        // if (notifier_) notifier_->debug("Sending logs");
+        sendLogs(client);
         client.stop();
         return;
     }
@@ -1360,6 +1622,47 @@ void RestApiServer::sendStatus(WiFiClient& client) const {
     json += "\"time\":\"" + currentTime + "\"";
     json += "}";
 
+    sendResponse(client, 200, "application/json", json);
+}
+
+/**
+ * @internal
+ * @brief Send retained web logs as JSON.
+ * @details
+ * Serializes up to 20 latest in-memory log entries (newest first) captured by WebpageTransport.
+ *
+ * @param client Active WiFi client connection.
+ *
+ * @author GOLETTA David
+ * @date 04/03/2026
+ * @endinternal
+ */
+void RestApiServer::sendLogs(WiFiClient& client) const {
+    String json = "{\"entries\":[";
+
+    if (webpageTransport_ != nullptr) {
+        const uint8_t entryCount = webpageTransport_->count();
+        json.reserve(16 + static_cast<size_t>(entryCount) * 96);
+
+        for (uint8_t i = 0; i < entryCount; ++i) {
+            WebpageTransport::LogEntry entry;
+            if (!webpageTransport_->getNewest(i, entry)) {
+                continue;
+            }
+
+            if (json.charAt(json.length() - 1) != '[') {
+                json += ",";
+            }
+
+            json += "{\"timestampMs\":" + String(entry.timestampMs) + ",\"level\":\"";
+            appendJsonEscaped(entry.level, json);
+            json += "\",\"message\":\"";
+            appendJsonEscaped(entry.message, json);
+            json += "\"}";
+        }
+    }
+
+    json += "]}";
     sendResponse(client, 200, "application/json", json);
 }
 
